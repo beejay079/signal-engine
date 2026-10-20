@@ -1,6 +1,6 @@
 # Put your Signal Engine online (no code, ~15 minutes)
 
-You will do 3 things once: get a data key, upload the files to GitHub, and deploy on Railway.
+You will do 3 things once: get a data key, upload the files to GitHub, and deploy free on Render.
 After that you just open a link on your phone and tap **Get signal**.
 
 ---
@@ -25,22 +25,30 @@ After that you just open a link on your phone and tap **Get signal**.
 
 ---
 
-## Step 3 — Deploy on Railway
+## Step 3 — Deploy free on Render
 
-1. Go to **railway.app** → **New Project** → **Deploy from GitHub repo**.
-2. Pick **signal-engine**. (If it's not listed, click **Configure GitHub App** and allow access to that repo.)
-3. When the project opens, click the service → **Variables** tab → **New Variable**, and add:
+1. Go to **render.com** → **Get Started** → sign up with your **GitHub** account.
+2. Click **New +** → **Web Service** → pick the **signal-engine** repo → **Connect**.
+3. Fill in:
+
+   | Field | Value |
+   |---|---|
+   | Language | **Python 3** |
+   | Build Command | `pip install -r requirements.txt` |
+   | Start Command | `uvicorn app:app --host 0.0.0.0 --port $PORT` |
+   | Instance Type | **Free** |
+
+4. Under **Environment Variables** add:
 
    | Name | Value |
    |---|---|
    | `TWELVE_DATA_API_KEY` | the key from Step 1 |
-   | `APP_PASSWORD` | any password you choose (stops strangers using your data limit) |
+   | `APP_PASSWORD` | any password you choose |
 
-4. Go to the **Settings** tab → **Networking** → click **Generate Domain**.
-5. Wait for the deploy to show **Active** (about 2 minutes), then open the domain link.
+5. Click **Deploy Web Service**. Wait for **Live** (3–5 minutes), then open the `.onrender.com` link at the top.
 
-The badge in the top right of the page should say **LIVE**.
-If it says **DEMO data**, the key from Step 1 isn't set correctly in Variables.
+> Free plan note: the app sleeps after 15 minutes with nobody using it. The first tap after that
+> takes about a minute to wake up. Open the app a minute before you trade; with **Watch** on, it stays awake.
 
 ---
 
@@ -65,5 +73,5 @@ The first time you tap **Get signal**, it asks for your `APP_PASSWORD`. It remem
 ## If something goes wrong
 
 - **"Twelve Data limit reached"** → the free plan allows 8 checks per minute. Wait a minute.
-- **Page won't open** → in Railway, open **Deployments** and send the red error text to Claude.
+- **Page won't open** → in Render, open **Logs** and send the red error text to Claude.
 - **Gold price differs from MT5** → Twelve Data and Exness prices can differ slightly. Always place the trade using your MT5 price and the same SL/TP distances.
