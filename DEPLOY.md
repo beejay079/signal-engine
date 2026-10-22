@@ -15,8 +15,8 @@ After that you just open a link on your phone and tap **Get signal**.
 
 ## Step 2 — Upload the files to GitHub
 
-1. Unzip `signal-web.zip` on your Mac. You will see these files:
-   `app.py`, `signal_engine.py`, `index.html`, `requirements.txt`, `Procfile`, `runtime.txt`, `DEPLOY.md`
+1. Unzip `signal-site.zip` on your Mac. You will see these files:
+   `app.py`, `signal_engine.py`, `limit_orders.py`, `index.html`, `requirements.txt`, `Procfile`, `runtime.txt`, `DEPLOY.md`
 2. Go to **github.com** → click **+** (top right) → **New repository**.
 3. Name it `signal-engine`, choose **Private**, click **Create repository**.
 4. On the next page click the link **"uploading an existing file"**.
@@ -63,12 +63,13 @@ The first time you tap **Get signal**, it asks for your `APP_PASSWORD`. It remem
 
 ## How to use it
 
-- Pick the pair, pick **1 min** or **5 min** for entry, set your balance and risk once (it remembers).
+- Pick the pair and timeframe (**1m, 5m, 15m or 1h**), set your balance and risk once (it remembers).
 - Tap **Get signal**.
   - **BUY now / SELL now** → enter at market immediately with the SL, TP and lot shown. Tap any number to copy it.
-  - **No trade** → it tells you why. "Waiting for a 1min entry trigger" means direction is set — try again in a minute.
+  - **BUY LIMIT / SELL LIMIT** → no entry right now, so place a pending order at the price shown
+    with its SL and TP. Cancel it if it isn't filled by the "Cancel at" time.
+  - **No trade** → it tells you why. "No entry trigger yet" means the direction is there but not the timing — try again shortly.
 - Turn on **Watch** and leave the page open: it checks every 30 seconds and beeps/vibrates when a trade appears.
-- **Time stop:** if TP1 isn't hit by the time shown, close the trade.
 
 ## If something goes wrong
 

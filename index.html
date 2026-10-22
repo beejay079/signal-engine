@@ -91,6 +91,12 @@
   .timer { font: 700 14px var(--mono); color: var(--wait); }
   .warn { color: var(--wait); font-size: 13px; }
   .err { padding: 16px 18px; color: var(--sell); }
+  .hero.pending { background: transparent; border-bottom: 1px dashed var(--line); }
+  .muted { color: var(--muted); font-size: 13px; margin-top: 6px; }
+  .pill { font-size: 11px; font-weight: 700; color: var(--accent); border: 1px solid rgba(77,163,255,.4);
+    border-radius: 99px; padding: 2px 8px; margin-left: 6px; }
+  .sidehead { font: 800 13px Inter, sans-serif; letter-spacing: .06em; }
+  .sidehead.b { color: var(--buy); } .sidehead.s { color: var(--sell); }
 
   details { border-top: 1px solid var(--line); }
   summary { padding: 14px 18px; cursor: pointer; color: var(--accent); font-weight: 600; font-size: 14px; list-style: none; }
@@ -114,7 +120,7 @@
 <div class="wrap">
   <header>
     <h1>Signal<span>Engine</span></h1>
-    <span id="mode" class="badge">Scalp · 15m → entry</span>
+    <span id="mode" class="badge">29 strategies</span>
   </header>
 
   <p class="label">Pair</p>
@@ -122,9 +128,9 @@
 
   <div class="row">
     <div>
-      <p class="label">Entry timeframe</p>
+      <p class="label">Timeframe</p>
       <div class="seg" id="tf">
-        <button data-v="1min">1 min</button><button data-v="5min">5 min</button>
+        <button data-v="1min">1m</button><button data-v="5min">5m</button><button data-v="15min">15m</button><button data-v="1h">1h</button>
       </div>
     </div>
     <div>
@@ -146,8 +152,8 @@
 
   <div id="out"></div>
 
-  <p class="foot">Not financial advice. Check the price in MT5 and the news calendar before entering.<br>
-  A signal is a market order: enter now, or skip it.</p>
+  <p class="foot">Higher-timeframe filter: 1m→15m · 5m→1h · 15m→4h · 1h→4h<br>
+  Not financial advice. Check the price in MT5 and the news calendar before entering.</p>
 </div>
 
 <script>
@@ -216,10 +222,6 @@ async function getSignal(silent = false) {
 
 // ---------- render ----------
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-function clock(mins) {
-  const t = new Date(Date.now() + mins * 60000);
-  return t.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
 function render(r) {
   const badge = $("#mode");
   badge.className = "badge " + (r.demo ? "demo" : "live");
@@ -228,12 +230,17 @@ function render(r) {
   const trade = r.signal === "BUY" || r.signal === "SELL";
   const cls = r.signal === "BUY" ? "buy" : r.signal === "SELL" ? "sell" : "wait";
   const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  const dir = `${r.direction_tf} direction: <b>${esc(r.direction_bias)}</b> · ${esc(r.regime)} · ${r.direction_confidence}% agree
-               <br>${r.interval} entry: ${r.entry_agreement}% agree · checked ${now}`;
+  const conf = r.confidence !== undefined ? ` · ${r.confidence}% agree` : "";
+  const sub = `${r.interval}: <b>${esc(r.regime)}</b> (${esc(r.regime_reason)}) · ${r.buy_votes} buy / ${r.sell_votes} sell${conf}
+               <br>${r.htf} trend: <b>${esc(r.htf_bias)}</b> · checked ${now}`;
 
-  let html = `<div class="card"><div class="hero ${cls}">
-    <div class="verdict"><b>${trade ? r.signal + " now" : "No trade"}</b><span>${esc(r.symbol)} ${r.price}</span></div>
-    <div class="sub">${dir}</div></div>`;
+  const limits = r.limit_orders || [];
+  const lcls = !trade && limits.length === 1 ? (limits[0].side.startsWith("BUY") ? "buy" : "sell") : cls;
+  const title = trade ? r.signal + " now" : limits.length === 1 ? limits[0].side.replace("LIMIT", "limit")
+              : limits.length > 1 ? "Range limits" : "No trade";
+  let html = `<div class="card"><div class="hero ${lcls}${!trade && limits.length ? " pending" : ""}">
+    <div class="verdict"><b>${title}</b><span>${esc(r.symbol)} ${r.price}</span></div>
+    <div class="sub">${sub}</div></div>`;
 
   if (trade) {
     const lv = (k, v, x, c = "") => `<div class="lv ${c}" data-copy="${v}"><div class="k">${k}</div><div class="v">${v}</div><div class="x">${x}</div></div>`;
@@ -243,24 +250,42 @@ function render(r) {
       ${lv("Stop loss", r.stop_loss, "−" + r.sl_distance, "sl")}
       ${lv("Take profit 1", r.take_profit_1, r.rr_tp1, "tp")}
       ${lv("Take profit 2", r.take_profit_2, r.rr_tp2, "tp")}
-      ${lv("TP1 expected", "~" + r.est_minutes_to_tp1 + "m", "rough estimate")}
+      ${lv("Agreement", r.confidence + "%", r.buy_votes + " buy / " + r.sell_votes + " sell")}
     </div>
-    <div class="section"><h3>Time stop</h3>
-      Close if TP1 isn't hit by <span class="timer">${clock(r.time_stop_minutes)}</span> (${r.time_stop_minutes} min).</div>
-    <div class="section"><h3>Why</h3>${r.triggers.map(esc).join(" · ")}</div>`;
+    <div class="section"><h3>Entry triggers</h3>${r.triggers.map(esc).join(" · ")}</div>`;
+  } else if (limits.length) {
+    const lv = (k, v, x, c = "") => `<div class="lv ${c}" data-copy="${v}"><div class="k">${k}</div><div class="v">${v}</div><div class="x">${x}</div></div>`;
+    limits.forEach(p => {
+      const buy = p.side.startsWith("BUY");
+      html += `${limits.length > 1 ? `<div class="section sidehead ${buy ? "b" : "s"}">${p.side}</div>` : ""}
+      <div class="levels">
+        ${lv(p.side.replace(" LIMIT", " limit at"), p.entry, (buy ? "▼ " : "▲ ") + p.distance_from_price + " from price")}
+        ${lv("Lot size", p.lot_size, "risk $" + p.risk_amount)}
+        ${lv("Stop loss", p.stop_loss, "−" + p.sl_distance, "sl")}
+        ${lv("Take profit 1", p.take_profit_1, p.rr_tp1, "tp")}
+        ${lv("Take profit 2", p.take_profit_2, p.rr_tp2, "tp")}
+        ${lv("Cancel at", clock(p.expires_in_minutes), "if not filled (" + p.expires_in_minutes + " min)")}
+      </div>
+      <div class="section"><h3>Zone</h3>${esc(p.zone)}${p.confluence > 1 ? ` <span class="pill">${p.confluence} confluences</span>` : ""}
+        <div class="muted">Bias: ${esc(p.bias)}</div>
+        ${p.lot_note ? `<div class="warn">⚠ ${esc(p.lot_note)}</div>` : ""}</div>`;
+    });
+    html += `<div class="section"><h3>Why no market entry now</h3><ul>${(r.reasons || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+      <div class="muted">Prices move — tap Get signal again before placing, and cancel the order if the signal changes side.</div></div>`;
   } else {
-    html += `<div class="section"><h3>Why not</h3><ul>${(r.reasons || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>`;
+    html += `<div class="section"><h3>Why not</h3><ul>${(r.reasons || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+      ${r.limit_note ? `<div class="muted">${esc(r.limit_note)}</div>` : ""}</div>`;
   }
   if (r.warnings && r.warnings.length) {
     html += `<div class="section">${r.warnings.map(w => `<div class="warn">⚠ ${esc(w)}</div>`).join("")}</div>`;
   }
   const row = v => `<div class="vote"><i class="${v.vote > 0 ? "b" : "s"}">${v.vote > 0 ? "BUY" : "SELL"}</i>
                      <div>${esc(v.strategy)}<small>${esc(v.reason)}</small></div></div>`;
-  const dirV = (r.direction_votes || []).filter(v => v.active && v.vote !== 0);
-  const entV = (r.votes || []).filter(v => v.trigger && v.vote !== 0);
+  const on = (r.votes || []).filter(v => v.active && v.vote !== 0);
+  const off = (r.votes || []).filter(v => !v.active && v.vote !== 0);
   html += `<details><summary>See all strategy votes</summary><div class="votes">
-      <h4>${r.direction_tf} direction (${dirV.length})</h4>${dirV.map(row).join("") || "<small>None</small>"}
-      <h4>${r.interval} entry triggers (${entV.length})</h4>${entV.map(row).join("") || "<small>None</small>"}
+      <h4>Counting in ${esc(r.regime)} (${on.length})</h4>${on.map(row).join("") || "<small>None</small>"}
+      <h4>Switched off in this regime (${off.length})</h4>${off.map(row).join("") || "<small>None</small>"}
     </div></details></div>`;
   $("#out").innerHTML = html;
 
@@ -268,6 +293,10 @@ function render(r) {
     navigator.clipboard && navigator.clipboard.writeText(el.dataset.copy);
     el.classList.add("copied"); setTimeout(() => el.classList.remove("copied"), 1200);
   });
+}
+
+function clock(mins) {
+  return new Date(Date.now() + mins * 60000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
 // ---------- alert when a trade appears ----------

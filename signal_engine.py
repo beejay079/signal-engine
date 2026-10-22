@@ -25,14 +25,11 @@ Usage
   python3 signal_engine.py --balance 100 --risk 2 --cent    # Exness cent lots
   python3 signal_engine.py --all                            # scan all 5 pairs
   python3 signal_engine.py --json                           # JSON output
-  python3 signal_engine.py --scalp                          # 15min direction + 5min entry
-  python3 signal_engine.py --scalp --tf 1min                # 15min direction + 1min entry
   python3 signal_engine.py --demo                           # offline test, fake data
 
 From your own code (FastAPI / bot):
-  from signal_engine import generate_signal, generate_scalp_signal
+  from signal_engine import generate_signal
   result = generate_signal("XAU/USD", "15min", balance=100, risk_pct=2)
-  scalp  = generate_scalp_signal("XAU/USD", "1min", balance=100, risk_pct=2)
 
 Needs: python3, pandas, numpy.  Not financial advice - backtest and demo first.
 """
@@ -79,17 +76,6 @@ REGIME_RULES = {
     "TRANSITION": dict(min_votes=5, min_agreement=0.80),
 }
 SWING_K = 3  # bars each side to confirm a swing high/low
-
-# Scalp mode: enter NOW at market, tight structure stop, quick 1:2 target
-SCALP = dict(
-    higher_tf={"1min": "15min", "5min": "15min", "15min": "1h"},
-    swing_lookback=10,      # only the last 10 candles decide the stop
-    sl_min_atr=0.5,         # stop never tighter than 0.5 ATR (noise)
-    sl_max_atr=1.2,         # stop never wider than 1.2 ATR -> TP1 stays close
-    buffer_atr=0.1,         # small buffer beyond the swing
-    max_spread_share=0.20,  # reject if spread is >20% of the stop
-    tp2_rr=2.5,
-)
 
 
 # --------------------------------------------------------------------------
@@ -730,12 +716,6 @@ STRATEGIES = [
 ]
 
 
-def higher_tf(interval, scalp=False):
-    if scalp:
-        return SCALP["higher_tf"].get(interval, HIGHER_TF.get(interval, "1day"))
-    return HIGHER_TF.get(interval, "1day")
-
-
 # --------------------------------------------------------------------------
 # REGIME + HIGHER TIMEFRAME
 # --------------------------------------------------------------------------
@@ -773,31 +753,20 @@ def htf_bias(df: pd.DataFrame | None):
 # --------------------------------------------------------------------------
 # RISK: SL / TP / LOT
 # --------------------------------------------------------------------------
-def build_trade(c: Ctx, symbol, direction, price, min_rr, tp2_rr, scalp=False):
+def build_trade(c: Ctx, symbol, direction, price, min_rr, tp2_rr):
     cfg = SYMBOLS.get(symbol, dict(spread=0.0))
     a, spread = c.atr_now, cfg["spread"]
     i = c.i
-    look, buf = (SCALP["swing_lookback"], SCALP["buffer_atr"]) if scalp else (30, 0.25)
-    lo_cap, hi_cap = (SCALP["sl_min_atr"], SCALP["sl_max_atr"]) if scalp else (0.8, 3.0)
-    default = 1.0 if scalp else 1.5
 
     if direction == 1:
-        if scalp:   # nearest low of the last few candles
-            ref = [c.l[i - look + 1:i + 1].min()]
-        else:
-            ref = [c.l[j] for j in c.sl if j >= i - look]
-        ref = [x for x in ref if x < price]
-        sl = (max(ref) - buf * a - spread) if ref else price - default * a
+        swing_lows = [c.l[j] for j in c.sl if j >= i - 30 and c.l[j] < price]
+        sl = (max(swing_lows) - 0.25 * a - spread) if swing_lows else price - 1.5 * a
         dist = price - sl
     else:
-        if scalp:
-            ref = [c.h[i - look + 1:i + 1].max()]
-        else:
-            ref = [c.h[j] for j in c.sh if j >= i - look]
-        ref = [x for x in ref if x > price]
-        sl = (min(ref) + buf * a + spread) if ref else price + default * a
+        swing_highs = [c.h[j] for j in c.sh if j >= i - 30 and c.h[j] > price]
+        sl = (min(swing_highs) + 0.25 * a + spread) if swing_highs else price + 1.5 * a
         dist = sl - price
-    dist = min(max(dist, lo_cap * a), hi_cap * a)  # not too tight (noise), not too wide
+    dist = min(max(dist, 0.8 * a), 3.0 * a)  # not too tight (noise), not too wide
     sl = price - dist if direction == 1 else price + dist
 
     tp1 = price + direction * min_rr * dist
@@ -823,13 +792,9 @@ def build_trade(c: Ctx, symbol, direction, price, min_rr, tp2_rr, scalp=False):
         if nearest and tp2 < nearest <= tp1:
             tp2 = min(tp1, nearest + 0.1 * a)
 
-    # Rough time-to-target: price moves ~1 ATR per candle on average, but in
-    # zig-zags, so covering D usually takes about (D / ATR)^2 candles.
-    est_bars = max(1, int(round((min_rr * dist / a) ** 2)))
     return dict(entry=price, sl=sl, tp1=tp1, tp2=tp2, risk_distance=dist,
                 rr_tp1=min_rr, rr_tp2=round(abs(tp2 - price) / dist, 2),
-                blocked=blocked, nearest_obstacle=nearest, est_bars=est_bars,
-                spread_share=spread / dist if dist else 1.0)
+                blocked=blocked, nearest_obstacle=nearest)
 
 
 def lot_size(symbol, entry, risk_distance, balance, risk_pct, cent=False):
@@ -856,14 +821,14 @@ def lot_size(symbol, entry, risk_distance, balance, risk_pct, cent=False):
 # --------------------------------------------------------------------------
 def generate_signal(symbol="XAU/USD", interval="15min", balance=100.0, risk_pct=2.0,
                     api_key=None, min_rr=2.0, tp2_rr=3.0, cent=False,
-                    df=None, htf_df=None, scalp=False):
+                    df=None, htf_df=None):
     """Run every strategy on the latest market data and return a signal dict."""
     api_key = api_key or os.getenv("TWELVE_DATA_API_KEY")
     if df is None:
         if not api_key:
             raise RuntimeError("Set TWELVE_DATA_API_KEY or pass --apikey")
         df = fetch_candles(symbol, interval, api_key)
-        htf_df = fetch_candles(symbol, higher_tf(interval, scalp), api_key, 300)
+        htf_df = fetch_candles(symbol, HIGHER_TF.get(interval, "1day"), api_key, 300)
 
     if len(df) < 250:
         raise RuntimeError(f"Need at least 250 candles, got {len(df)}")
@@ -879,11 +844,8 @@ def generate_signal(symbol="XAU/USD", interval="15min", balance=100.0, risk_pct=
     age_min = (now - df.index[-1].to_pydatetime()).total_seconds() / 60
     if age_min > 3 * c.minutes + 5:
         warnings.append(f"Last candle is {age_min / 60:.1f}h old - market may be closed.")
-    off_session = SYMBOLS.get(symbol, {}).get("fx_session") and not (7 <= now.hour < 20)
-    if off_session and not scalp:
+    if SYMBOLS.get(symbol, {}).get("fx_session") and not (7 <= now.hour < 20):
         warnings.append("Outside London/NY hours - lower liquidity, signals are weaker.")
-    if scalp:
-        tp2_rr = SCALP["tp2_rr"]
 
     regime, regime_why = detect_regime(c)
     htf_dir, htf_why = htf_bias(htf_df)
@@ -908,8 +870,7 @@ def generate_signal(symbol="XAU/USD", interval="15min", balance=100.0, risk_pct=
 
     result = dict(symbol=symbol, interval=interval, time_utc=now.strftime("%Y-%m-%d %H:%M"),
                   price=round(price, digits), regime=regime, regime_reason=regime_why,
-                  mode="SCALP" if scalp else "SWING",
-                  htf=higher_tf(interval, scalp), htf_bias={1: "BULLISH", -1: "BEARISH", 0: "NEUTRAL"}[htf_dir],
+                  htf=HIGHER_TF.get(interval), htf_bias={1: "BULLISH", -1: "BEARISH", 0: "NEUTRAL"}[htf_dir],
                   htf_reason=htf_why, buy_votes=buy_n, sell_votes=sell_n,
                   signal="NO TRADE", reasons=[], warnings=warnings, votes=votes)
 
@@ -926,8 +887,6 @@ def generate_signal(symbol="XAU/USD", interval="15min", balance=100.0, risk_pct=
     result["confidence"] = round(100 * agreement)
 
     # Gate checks - every one must pass
-    if scalp and off_session:
-        result["reasons"].append("Scalping only in London/NY hours (07:00-20:00 UTC) - spreads too wide now.")
     if direction == 0:
         result["reasons"].append("Buy and sell votes are balanced.")
     if agree_n < rules["min_votes"]:
@@ -938,14 +897,12 @@ def generate_signal(symbol="XAU/USD", interval="15min", balance=100.0, risk_pct=
         result["reasons"].append("No entry trigger yet (direction only, no timing). Wait.")
     if direction != 0 and htf_dir == -direction:
         if regime != "RANGING" or agreement < 0.85:
-            result["reasons"].append(f"Against the {higher_tf(interval, scalp)} trend ({htf_why}).")
+            result["reasons"].append(f"Against the {HIGHER_TF.get(interval)} trend ({htf_why}).")
         else:
             warnings.append("Counter-trend to higher timeframe - take TP1 only.")
 
     if direction != 0:
-        trade = build_trade(c, symbol, direction, price, min_rr, tp2_rr, scalp)
-        if scalp and trade["spread_share"] > SCALP["max_spread_share"]:
-            result["reasons"].append(f"Spread is {trade['spread_share']:.0%} of the stop - too costly to scalp.")
+        trade = build_trade(c, symbol, direction, price, min_rr, tp2_rr)
         if trade["blocked"]:
             ob = trade["nearest_obstacle"]
             result["reasons"].append(f"No room for 1:{min_rr:g} - strong level at {ob:.{digits}f} is before TP1.")
@@ -960,145 +917,7 @@ def generate_signal(symbol="XAU/USD", interval="15min", balance=100.0, risk_pct=
                 rr_tp1=f"1:{trade['rr_tp1']:g}", rr_tp2=f"1:{trade['rr_tp2']:g}",
                 sl_distance=round(trade["risk_distance"], digits),
                 lot_size=lots, risk_amount=round(risk_amt, 2), triggers=triggers,
-                order="MARKET - enter now",
-                est_minutes_to_tp1=trade["est_bars"] * c.minutes,
             )
-            if scalp:  # time stop: a scalp that stalls is a failed scalp
-                result["time_stop_minutes"] = max(3, trade["est_bars"] * 3) * c.minutes
-    return result
-
-
-# --------------------------------------------------------------------------
-# SCALP ENGINE  -  15min decides DIRECTION, 5min/1min decides ENTRY
-# --------------------------------------------------------------------------
-ALL_ON = {"trend": 1.0, "breakout": 1.0, "price_action": 1.0, "reversion": 1.0}
-
-
-def run_strategies(c: Ctx, weights: dict):
-    votes = []
-    for name, fam, w, trig, fn in STRATEGIES:
-        try:
-            v, why = fn(c)
-        except Exception as e:
-            v, why = 0, f"error: {e}"
-        eff = w * weights.get(fam, 0.0)
-        votes.append(dict(strategy=name, family=fam, vote=int(v), reason=why,
-                          weight=round(eff, 2), active=eff > 0, trigger=trig))
-    act = [v for v in votes if v["active"]]
-    tally = dict(buy_w=sum(v["weight"] for v in act if v["vote"] == 1),
-                 sell_w=sum(v["weight"] for v in act if v["vote"] == -1),
-                 buy_n=sum(1 for v in act if v["vote"] == 1),
-                 sell_n=sum(1 for v in act if v["vote"] == -1))
-    return votes, tally
-
-
-def generate_scalp_signal(symbol="XAU/USD", entry_tf="5min", balance=100.0, risk_pct=2.0,
-                          api_key=None, min_rr=2.0, cent=False,
-                          dir_df=None, entry_df=None, direction_tf="15min"):
-    """Top-down scalp: all strategies on 15min pick the direction,
-    then 5min/1min must give an entry trigger in that direction. Market entry."""
-    api_key = api_key or os.getenv("TWELVE_DATA_API_KEY")
-    if dir_df is None or entry_df is None:
-        if not api_key:
-            raise RuntimeError("Set TWELVE_DATA_API_KEY or pass --apikey")
-        dir_df = fetch_candles(symbol, direction_tf, api_key)
-        entry_df = fetch_candles(symbol, entry_tf, api_key)
-    for name, d in ((direction_tf, dir_df), (entry_tf, entry_df)):
-        if len(d) < 250:
-            raise RuntimeError(f"Need at least 250 {name} candles, got {len(d)}")
-
-    price = float(entry_df["close"].iloc[-1])
-    dc = Ctx(dir_df.iloc[:-1], direction_tf)      # direction frame (closed candles)
-    ec = Ctx(entry_df.iloc[:-1], entry_tf)        # entry frame (closed candles)
-    digits = SYMBOLS.get(symbol, {}).get("digits", 5)
-    now = datetime.now(timezone.utc)
-    warnings, reasons = [], []
-    name = {1: "BUY", -1: "SELL", 0: "NONE"}
-
-    age_min = (now - entry_df.index[-1].to_pydatetime()).total_seconds() / 60
-    if age_min > 3 * ec.minutes + 5:
-        warnings.append(f"Last candle is {age_min / 60:.1f}h old - market may be closed.")
-    if SYMBOLS.get(symbol, {}).get("fx_session") and not (7 <= now.hour < 20):
-        reasons.append("Scalping only in London/NY hours (07:00-20:00 UTC) - spreads too wide now.")
-
-    # ---- STEP 1: direction from 15min ----
-    regime, regime_why = detect_regime(dc)
-    dir_votes, dt = run_strategies(dc, REGIME_WEIGHTS.get(regime, {}))
-    direction = 1 if dt["buy_w"] > dt["sell_w"] else -1 if dt["sell_w"] > dt["buy_w"] else 0
-    agree_w, against_w = (dt["buy_w"], dt["sell_w"]) if direction == 1 else (dt["sell_w"], dt["buy_w"])
-    agree_n = dt["buy_n"] if direction == 1 else dt["sell_n"]
-    d_agreement = agree_w / (agree_w + against_w) if (agree_w + against_w) else 0
-
-    if regime == "VOLATILE":
-        reasons.append(f"{direction_tf} is too volatile ({regime_why}). Stand aside.")
-    else:
-        rules = REGIME_RULES[regime]
-        if direction == 0 or agree_n < rules["min_votes"] or d_agreement < rules["min_agreement"]:
-            reasons.append(f"{direction_tf} has no clear direction ({agree_n} votes, "
-                           f"{d_agreement:.0%} agreement in {regime}).")
-
-    # ---- STEP 2: entry trigger from 5min / 1min ----
-    e_regime, e_why = detect_regime(ec)
-    ent_votes, et = run_strategies(ec, ALL_ON)
-    ent_trig = [v["strategy"] for v in ent_votes if v["trigger"] and direction and v["vote"] == direction]
-    opp_trig = [v["strategy"] for v in ent_votes if v["trigger"] and direction and v["vote"] == -direction]
-    e_for = et["buy_w"] if direction == 1 else et["sell_w"]
-    e_against = et["sell_w"] if direction == 1 else et["buy_w"]
-    e_agreement = e_for / (e_for + e_against) if (e_for + e_against) else 0
-
-    if not reasons:
-        if e_regime == "VOLATILE":
-            reasons.append(f"{entry_tf} volatility spike ({e_why}) - wait for it to settle.")
-        if not ent_trig:
-            reasons.append(f"{direction_tf} says {name[direction]} - waiting for a {entry_tf} entry trigger.")
-        elif len(opp_trig) > len(ent_trig):
-            reasons.append(f"{entry_tf} triggers point the other way ({', '.join(opp_trig)}).")
-        if e_agreement < 0.55:
-            reasons.append(f"{entry_tf} momentum still against {direction_tf} ({e_agreement:.0%} agreement).")
-
-    result = dict(symbol=symbol, mode="SCALP", interval=entry_tf, direction_tf=direction_tf,
-                  time_utc=now.strftime("%Y-%m-%d %H:%M"), price=round(price, digits),
-                  regime=regime, regime_reason=regime_why,
-                  direction_bias=name[direction], direction_confidence=round(100 * d_agreement),
-                  buy_votes=dt["buy_n"], sell_votes=dt["sell_n"],
-                  entry_regime=e_regime, entry_agreement=round(100 * e_agreement),
-                  signal="NO TRADE", reasons=reasons, warnings=warnings,
-                  direction_votes=dir_votes, votes=ent_votes)
-    if reasons or direction == 0:
-        return result
-
-    # ---- STEP 3: tight stop on entry frame, 1:2 target, room check on BOTH frames ----
-    trade = build_trade(ec, symbol, direction, price, min_rr, SCALP["tp2_rr"], scalp=True)
-    if trade["spread_share"] > SCALP["max_spread_share"]:
-        reasons.append(f"Spread is {trade['spread_share']:.0%} of the stop - too costly to scalp.")
-    blockers = [trade["nearest_obstacle"]] if trade["blocked"] else []
-    big = list(dc.resistances) + [dc.prev_day_high] if direction == 1 else list(dc.supports) + [dc.prev_day_low]
-    big = [x for x in big if x and (x - price) * direction > 0.3 * ec.atr_now]
-    if big:
-        near15 = min(big, key=lambda x: abs(x - price))
-        if abs(near15 - price) < abs(trade["tp1"] - price):
-            blockers.append(near15)
-        elif abs(near15 - price) < abs(trade["tp2"] - price):
-            trade["tp2"] = near15 - direction * 0.1 * ec.atr_now
-            trade["rr_tp2"] = round(abs(trade["tp2"] - price) / trade["risk_distance"], 2)
-    if blockers:
-        reasons.append(f"No room for 1:{min_rr:g} - level at {blockers[0]:.{digits}f} is before TP1.")
-    if reasons:
-        return result
-
-    lots, lot_note, risk_amt = lot_size(symbol, price, trade["risk_distance"], balance, risk_pct, cent)
-    if lot_note:
-        warnings.append(lot_note)
-    result.update(
-        signal=name[direction], order="MARKET - enter now",
-        entry=round(price, digits), stop_loss=round(trade["sl"], digits),
-        take_profit_1=round(trade["tp1"], digits), take_profit_2=round(trade["tp2"], digits),
-        rr_tp1=f"1:{min_rr:g}", rr_tp2=f"1:{trade['rr_tp2']:g}",
-        sl_distance=round(trade["risk_distance"], digits),
-        lot_size=lots, risk_amount=round(risk_amt, 2), triggers=ent_trig,
-        est_minutes_to_tp1=trade["est_bars"] * ec.minutes,
-        time_stop_minutes=max(3, trade["est_bars"] * 3) * ec.minutes,
-    )
     return result
 
 
@@ -1107,28 +926,20 @@ def generate_scalp_signal(symbol="XAU/USD", entry_tf="5min", balance=100.0, risk
 # --------------------------------------------------------------------------
 def print_signal(r, show_all=False):
     line = "=" * 64
-    print(f"\n{line}\n {r.get('mode', '')} {r['symbol']}  |  {r['interval']}  |  {r['time_utc']} UTC  |  price {r['price']}\n{line}")
-    if "direction_tf" in r:
-        print(f" Direction ({r['direction_tf']}): {r['direction_bias']}  |  {r['regime']} ({r['regime_reason']})"
-              f"  |  {r['buy_votes']} buy / {r['sell_votes']} sell, {r['direction_confidence']}% agree")
-        print(f" Entry ({r['interval']}): {r['entry_regime']}  |  {r['entry_agreement']}% agree with direction")
-    else:
-        print(f" Regime : {r['regime']} ({r['regime_reason']})")
-        print(f" HTF {r['htf']:<5}: {r['htf_bias']} ({r['htf_reason']})")
-        print(f" Votes  : {r['buy_votes']} buy / {r['sell_votes']} sell"
-              + (f"  |  agreement {r['confidence']}%" if "confidence" in r else ""))
+    print(f"\n{line}\n {r['symbol']}  |  {r['interval']}  |  {r['time_utc']} UTC  |  price {r['price']}\n{line}")
+    print(f" Regime : {r['regime']} ({r['regime_reason']})")
+    print(f" HTF {r['htf']:<5}: {r['htf_bias']} ({r['htf_reason']})")
+    print(f" Votes  : {r['buy_votes']} buy / {r['sell_votes']} sell"
+          + (f"  |  agreement {r['confidence']}%" if "confidence" in r else ""))
     print(line)
     if r["signal"] in ("BUY", "SELL"):
-        print(f" >>> {r['signal']} NOW <<<   ({r['order']})")
+        print(f" >>> {r['signal']} <<<")
         print(f" Entry : {r['entry']}")
         print(f" SL    : {r['stop_loss']}   (distance {r['sl_distance']})")
         print(f" TP1   : {r['take_profit_1']}   ({r['rr_tp1']})")
         print(f" TP2   : {r['take_profit_2']}   ({r['rr_tp2']})")
         print(f" Lot   : {r['lot_size']}   (risking ${r['risk_amount']})")
         print(f" Trigger(s): {', '.join(r['triggers'])}")
-        print(f" TP1 expected in ~{r['est_minutes_to_tp1']} min")
-        if "time_stop_minutes" in r:
-            print(f" Time stop: close if TP1 not hit within {r['time_stop_minutes']} min")
     else:
         print(" >>> NO TRADE <<<")
         for why in r["reasons"]:
@@ -1137,22 +948,13 @@ def print_signal(r, show_all=False):
         print(f" ! {w}")
     print(line)
     icon = {1: "BUY ", -1: "SELL", 0: " -  "}
-
-    def show(votes, title, triggers_only=False):
-        print(f" {title}")
-        for v in votes:
-            if triggers_only and not v["trigger"] and not show_all:
-                continue
-            if (not v["active"] or v["vote"] == 0) and not show_all:
-                continue
-            tag = "" if v["active"] else "  (off in this regime)"
-            print(f"   {icon[v['vote']]}  {v['strategy']:<27} {v['reason']}{tag}")
-
-    if "direction_votes" in r:
-        show(r["direction_votes"], f"[{r['direction_tf']} DIRECTION]")
-        show(r["votes"], f"[{r['interval']} ENTRY TRIGGERS]", triggers_only=True)
-    else:
-        show(r["votes"], "[VOTES]")
+    for v in r["votes"]:
+        if not v["active"] and not show_all:
+            continue
+        if v["vote"] == 0 and not show_all:
+            continue
+        tag = "" if v["active"] else "  (off in this regime)"
+        print(f" {icon[v['vote']]}  {v['strategy']:<27} {v['reason']}{tag}")
     if not show_all:
         print(" (use --verbose to see every strategy)")
     print(line)
@@ -1166,44 +968,26 @@ def main():
     ap.add_argument("--risk", type=float, default=2.0, help="risk per trade in %%")
     ap.add_argument("--rr", type=float, default=2.0, help="minimum reward:risk for TP1")
     ap.add_argument("--cent", action="store_true", help="show lot size for an Exness cent account")
-    ap.add_argument("--scalp", action="store_true",
-                    help="scalp: 15min picks direction, --tf (5min default, or 1min) picks entry. Market entry, 1:2")
     ap.add_argument("--all", action="store_true", help="scan every symbol in SYMBOLS")
     ap.add_argument("--json", action="store_true", help="print JSON instead of text")
     ap.add_argument("--verbose", action="store_true", help="show every strategy's vote")
     ap.add_argument("--apikey", default=None, help="Twelve Data key (or set TWELVE_DATA_API_KEY)")
     ap.add_argument("--demo", action="store_true", help="use fake data (offline test)")
     a = ap.parse_args()
-    if a.scalp and "--tf" not in sys.argv:
-        a.tf = "5min"
-    if a.scalp and a.tf not in ("1min", "5min"):
-        ap.error("scalp entry timeframe must be 1min or 5min")
 
     symbols = list(SYMBOLS) if a.all else [a.symbol]
     results = []
     for n, sym in enumerate(symbols):
         try:
-            if a.demo and a.scalp:
-                start = {"XAU/USD": 2650, "EUR/USD": 1.08, "GBP/USD": 1.27, "USD/JPY": 150, "BTC/USD": 65000}.get(sym, 100)
-                r = generate_scalp_signal(sym, a.tf, a.balance, a.risk, min_rr=a.rr, cent=a.cent,
-                                          dir_df=demo_candles("15min", 500, seed=n + 7, start_price=start),
-                                          entry_df=demo_candles(a.tf, 500, seed=n + 7, start_price=start))
-            elif a.scalp:
-                if n > 0:
-                    time.sleep(16)  # Twelve Data free tier: 8 requests/minute
-                r = generate_scalp_signal(sym, a.tf, a.balance, a.risk, api_key=a.apikey,
-                                          min_rr=a.rr, cent=a.cent)
-            elif a.demo:
+            if a.demo:
                 start = {"XAU/USD": 2650, "EUR/USD": 1.08, "GBP/USD": 1.27, "USD/JPY": 150, "BTC/USD": 65000}.get(sym, 100)
                 df = demo_candles(a.tf, 500, seed=n + 7, start_price=start)
-                htf = demo_candles(higher_tf(a.tf, a.scalp), 300, seed=n + 99, start_price=start)
-                r = generate_signal(sym, a.tf, a.balance, a.risk, min_rr=a.rr, cent=a.cent,
-                                    df=df, htf_df=htf, scalp=a.scalp)
+                htf = demo_candles(HIGHER_TF.get(a.tf, "1day"), 300, seed=n + 99, start_price=start)
+                r = generate_signal(sym, a.tf, a.balance, a.risk, min_rr=a.rr, cent=a.cent, df=df, htf_df=htf)
             else:
                 if n > 0:
                     time.sleep(16)  # Twelve Data free tier: 8 requests/minute
-                r = generate_signal(sym, a.tf, a.balance, a.risk, api_key=a.apikey, min_rr=a.rr,
-                                    cent=a.cent, scalp=a.scalp)
+                r = generate_signal(sym, a.tf, a.balance, a.risk, api_key=a.apikey, min_rr=a.rr, cent=a.cent)
         except Exception as e:
             r = dict(symbol=sym, error=str(e))
         results.append(r)
