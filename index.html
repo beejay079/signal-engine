@@ -110,6 +110,58 @@
   .vote i.b { color: var(--buy); } .vote i.s { color: var(--sell); }
   .vote div small { display: block; color: var(--faint); }
 
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; padding: 4px; margin-bottom: 18px; }
+  .tabs button { border: 0; background: transparent; color: var(--muted); border-radius: 9px; padding: 10px 0;
+    font: 700 14px Inter, sans-serif; cursor: pointer; position: relative; }
+  .tabs button.on { background: var(--panel-2); color: var(--text); box-shadow: 0 0 0 1px var(--line); }
+  .tabs .dot { position: absolute; top: 8px; margin-left: 4px; width: 7px; height: 7px; border-radius: 50%; background: var(--buy); }
+  .cats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+  .cat { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 12px;
+    padding: 12px 4px; font: 500 14px Inter, sans-serif; cursor: pointer; line-height: 1.15; min-height: 46px; }
+  .cat.on { font-weight: 800; border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .mkts { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+  .mk { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 10px;
+    padding: 9px 11px; font: 600 13px Inter, sans-serif; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  .mk small { color: var(--faint); font-weight: 500; font-size: 11px; }
+  .mk.on { background: var(--accent); border-color: var(--accent); color: #06111f; }
+  .mk.on small { color: rgba(6,17,31,.7); }
+  .mk.locked { opacity: .45; cursor: not-allowed; }
+  .mk .star { color: #f2b544; }
+  .grade { font: 800 12px var(--mono); padding: 3px 8px; border-radius: 6px; margin-left: 8px; vertical-align: 6px; }
+  .grade.Ap { background: var(--buy); color: #04140c; } .grade.A { background: rgba(31,199,126,.25); color: var(--buy); }
+  .grade.B { background: rgba(242,181,68,.2); color: var(--wait); } .grade.C { background: var(--panel-2); color: var(--muted); }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; margin-bottom: 14px; }
+  .panel h2 { margin: 0 0 10px; font-size: 15px; font-weight: 800; display: flex; justify-content: space-between; align-items: center; }
+  .stat { display: flex; justify-content: space-between; font-size: 13px; padding: 5px 0; color: var(--muted); }
+  .stat b { color: var(--text); font-weight: 600; }
+  .meter { height: 8px; background: var(--panel-2); border-radius: 99px; overflow: hidden; margin: 8px 0 4px; }
+  .meter i { display: block; height: 100%; background: var(--accent); }
+  .meter i.over { background: var(--sell); }
+  .switch { position: relative; width: 44px; height: 26px; flex: none; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch span { position: absolute; inset: 0; background: var(--panel-2); border: 1px solid var(--line); border-radius: 99px; transition: .2s; }
+  .switch span::after { content: ""; position: absolute; width: 20px; height: 20px; left: 2px; top: 2px; background: var(--muted); border-radius: 50%; transition: .2s; }
+  .switch input:checked + span { background: var(--buy); border-color: var(--buy); }
+  .switch input:checked + span::after { transform: translateX(18px); background: #fff; }
+  .wl-cat { font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin: 12px 0 6px; }
+  .wl { display: flex; flex-wrap: wrap; gap: 6px; }
+  .wl label { border: 1px solid var(--line); border-radius: 9px; padding: 7px 10px; font-size: 13px; cursor: pointer; display: flex; gap: 6px; align-items: center; }
+  .wl label.on { border-color: var(--accent); background: rgba(77,163,255,.1); }
+  .wl label.locked { opacity: .4; cursor: not-allowed; }
+  .wl input { display: none; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  select { width: 100%; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px; font: 600 14px Inter, sans-serif; }
+  .btn2 { border: 1px solid var(--line); background: var(--panel-2); color: var(--text); border-radius: 12px; padding: 12px;
+    font: 700 14px Inter, sans-serif; cursor: pointer; width: 100%; margin-top: 10px; }
+  .feed .item { border-top: 1px solid var(--line); padding: 10px 0; font-size: 13px; }
+  .feed .item:first-child { border-top: 0; }
+  .feed .item b { font-size: 14px; } .feed .item pre { margin: 4px 0 0; white-space: pre-wrap; font: 12px/1.5 var(--mono); color: var(--muted); }
+  .row3 { display: grid; grid-template-columns: 1.4fr 1fr .8fr; gap: 6px; padding: 7px 0; border-top: 1px solid var(--line); font-size: 13px; align-items: center; }
+  .row3:first-child { border-top: 0; }
+  .ok { color: var(--buy); } .bad { color: var(--sell); }
+  .hidden { display: none !important; }
   .foot { color: var(--faint); font-size: 11px; text-align: center; margin-top: 22px; line-height: 1.5; }
   .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(6,17,31,.3);
     border-top-color: #06111f; border-radius: 50%; animation: s .7s linear infinite; vertical-align: -2px; margin-right: 8px; }
@@ -123,8 +175,12 @@
     <span id="mode" class="badge">29 strategies</span>
   </header>
 
-  <p class="label">Pair</p>
-  <div class="pairs" id="pairs"></div>
+  <div class="tabs"><button data-t="signal" class="on">Signal</button><button data-t="scanner">Scanner<span class="dot hidden" id="scanDot"></span></button></div>
+
+  <section id="tab-signal">
+  <p class="label">Market</p>
+  <div class="cats" id="cats"></div>
+  <div class="mkts" id="mkts"></div>
 
   <div class="row">
     <div>
@@ -151,35 +207,114 @@
   <p class="hint" id="hint"></p>
 
   <div id="out"></div>
+  </section>
+
+  <section id="tab-scanner" class="hidden">
+    <div class="panel">
+      <h2>Auto-scanner <label class="switch"><input type="checkbox" id="scEnabled"><span></span></label></h2>
+      <div class="stat">Status <b id="scStatus">–</b></div>
+      <div class="stat">Last scan <b id="scLast">–</b></div>
+      <div class="stat">Phone alerts <b id="scChannels">–</b></div>
+      <div class="stat">Data used today <b id="scCredits">–</b></div>
+      <div class="muted" id="scNote"></div>
+      <button class="btn2" id="scTest">Send test notification</button>
+    </div>
+
+    <div class="panel">
+      <h2>Alerts</h2>
+      <div class="feed" id="scAlerts"><div class="muted">No alerts yet.</div></div>
+    </div>
+
+    <div class="panel">
+      <h2>Latest check per market</h2>
+      <div id="scLatest"><div class="muted">Nothing scanned yet.</div></div>
+    </div>
+
+    <div class="panel">
+      <h2>What to watch</h2>
+      <div class="grid2">
+        <div><p class="label">Gold checks</p><select id="scGoldTf"><option value="1min">Every 1 min</option><option value="5min">Every 5 min</option><option value="15min">Every 15 min</option></select></div>
+        <div><p class="label">Gold alert from</p><select id="scGoldGrade"><option value="A+">A+ only</option><option value="A">A and up</option><option value="B">B and up</option></select></div>
+        <div><p class="label">Others checks</p><select id="scOtherTf"><option value="5min">Every 5 min</option><option value="15min">Every 15 min</option></select></div>
+        <div><p class="label">Others alert from</p><select id="scOtherGrade"><option value="A+">A+ only</option><option value="A">A and up</option><option value="B">B and up</option></select></div>
+      </div>
+      <div class="toggles" style="margin:14px 0 0"><label><input type="checkbox" id="scLimit"> Also alert limit-order setups (2+ confluences)</label></div>
+      <div id="scWatch"></div>
+      <p class="label" style="margin-top:14px">Daily data budget</p>
+      <div class="meter"><i id="scMeter"></i></div>
+      <div class="muted" id="scBudget"></div>
+      <button class="go" id="scSave" style="margin-top:14px">Save scanner settings</button>
+      <p class="hint" id="scSaved"></p>
+    </div>
+    <p class="foot">Grades: A+ ≥ 85 · A ≥ 75 · B ≥ 65 — from strategy agreement, number of entry triggers,
+    higher-timeframe trend and regime. Scans 08:00–21:00 Lagos time, Mon–Fri (crypto every day).</p>
+  </section>
 
   <p class="foot">Higher-timeframe filter: 1m→15m · 5m→1h · 15m→4h · 1h→4h<br>
   Not financial advice. Check the price in MT5 and the news calendar before entering.</p>
 </div>
 
 <script>
-const PAIRS = [["XAU/USD","Gold"],["EUR/USD","EU"],["GBP/USD","GU"],["USD/JPY","UJ"],["BTC/USD","BTC"]];
+let MARKETS = [], CATS = [], BY = {};
 const $ = s => document.querySelector(s);
 const store = {
   get(k, d) { try { const v = localStorage.getItem("se_" + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem("se_" + k, JSON.stringify(v)); } catch {} },
 };
 let state = {
+  cat: store.get("cat", "Metals"),
   symbol: store.get("symbol", "XAU/USD"), tf: store.get("tf", "1min"),
   balance: store.get("balance", 100), risk: store.get("risk", 2), cent: store.get("cent", false),
 };
 let password = store.get("pw", "");
 let watchTimer = null, lastSignal = null, busy = false;
 
+// ---------- password-aware fetch ----------
+async function api(url, opts = {}) {
+  opts.headers = Object.assign({}, opts.headers || {}, password ? { "X-App-Password": password } : {});
+  const res = await fetch(url, opts);
+  if (res.status === 401) {
+    const pw = prompt("Enter your app password");
+    if (pw) { password = pw; store.set("pw", pw); return api(url, opts); }
+    throw new Error("Password needed");
+  }
+  return res;
+}
+
+// ---------- markets ----------
+async function loadMarkets() {
+  try {
+    const d = await (await fetch("/api/markets")).json();
+    MARKETS = d.markets; CATS = d.categories; BY = Object.fromEntries(MARKETS.map(m => [m.symbol, m]));
+  } catch { MARKETS = [{ symbol: "XAU/USD", name: "Gold", category: "Metals" }]; CATS = ["Metals"]; BY = { "XAU/USD": MARKETS[0] }; }
+  if (!BY[state.symbol] || BY[state.symbol].locked) state.symbol = "XAU/USD";
+  if (!CATS.includes(state.cat)) state.cat = BY[state.symbol].category;
+  $("#cats").innerHTML = CATS.map(c => `<button class="cat" data-v="${c}">${c}</button>`).join("");
+  paint();
+}
+function short(sym) { return sym.replace("/", ""); }
+function paintMarkets() {
+  const list = MARKETS.filter(m => m.category === state.cat);
+  $("#mkts").innerHTML = list.map(m => `<button class="mk${m.locked ? " locked" : ""}" data-v="${m.symbol}"
+      title="${m.locked ? "Needs the Twelve Data " + m.plan + " plan" : ""}">${m.symbol === "XAU/USD" ? '<span class="star">★</span>' : ""}${esc(m.name)}
+      ${m.locked ? `<small>🔒 ${m.plan}</small>` : m.name === short(m.symbol) ? "" : `<small>${short(m.symbol)}</small>`}</button>`).join("");
+}
+$("#cats").onclick = e => { const b = e.target.closest(".cat"); if (!b) return;
+  state.cat = b.dataset.v; store.set("cat", state.cat); paint(); };
+$("#mkts").onclick = e => { const b = e.target.closest(".mk"); if (!b) return;
+  const m = BY[b.dataset.v];
+  if (m.locked) { $("#hint").textContent = `${m.name} needs the Twelve Data ${m.plan[0].toUpperCase() + m.plan.slice(1)} plan (set DATA_PLAN on Render after upgrading).`; return; }
+  $("#hint").textContent = "";
+  state.symbol = m.symbol; store.set("symbol", state.symbol); paint(); lastSignal = null; getSignal(); };
+
 // ---------- controls ----------
-$("#pairs").innerHTML = PAIRS.map(([s, n]) =>
-  `<button class="chip" data-v="${s}">${n}<small>${s.replace("/USD","").replace("USD/","")}</small></button>`).join("");
 function paint() {
-  document.querySelectorAll("#pairs .chip").forEach(b => b.classList.toggle("on", b.dataset.v === state.symbol));
+  document.querySelectorAll("#cats .cat").forEach(b => b.classList.toggle("on", b.dataset.v === state.cat));
+  paintMarkets();
+  document.querySelectorAll("#mkts .mk").forEach(b => b.classList.toggle("on", b.dataset.v === state.symbol));
   document.querySelectorAll("#tf button").forEach(b => b.classList.toggle("on", b.dataset.v === state.tf));
   $("#balance").value = state.balance; $("#risk").value = state.risk; $("#cent").checked = state.cent;
 }
-$("#pairs").onclick = e => { const b = e.target.closest(".chip"); if (!b) return;
-  state.symbol = b.dataset.v; store.set("symbol", state.symbol); paint(); lastSignal = null; getSignal(); };
 $("#tf").onclick = e => { const b = e.target.closest("button"); if (!b) return;
   state.tf = b.dataset.v; store.set("tf", state.tf); paint(); };
 $("#balance").onchange = e => { state.balance = parseFloat(e.target.value) || 100; store.set("balance", state.balance); };
@@ -191,7 +326,7 @@ $("#watch").onchange = e => {
   if (e.target.checked) { getSignal(); watchTimer = setInterval(() => getSignal(true), 30000); }
   $("#hint").textContent = e.target.checked ? "Watching… you'll get a beep when a trade appears." : "";
 };
-paint();
+loadMarkets();
 
 // ---------- fetch ----------
 async function getSignal(silent = false) {
@@ -202,12 +337,7 @@ async function getSignal(silent = false) {
   const q = new URLSearchParams({ symbol: state.symbol, tf: state.tf, balance: state.balance,
                                   risk: state.risk, cent: state.cent });
   try {
-    const res = await fetch("/api/signal?" + q, { headers: password ? { "X-App-Password": password } : {} });
-    if (res.status === 401) {
-      const pw = prompt("Enter your app password");
-      if (pw) { password = pw; store.set("pw", pw); busy = false; return getSignal(silent); }
-      throw new Error("Password needed");
-    }
+    const res = await api("/api/signal?" + q);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || data.detail || "Something went wrong");
     render(data);
@@ -221,7 +351,7 @@ async function getSignal(silent = false) {
 }
 
 // ---------- render ----------
-const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 function render(r) {
   const badge = $("#mode");
   badge.className = "badge " + (r.demo ? "demo" : "live");
@@ -239,7 +369,7 @@ function render(r) {
   const title = trade ? r.signal + " now" : limits.length === 1 ? limits[0].side.replace("LIMIT", "limit")
               : limits.length > 1 ? "Range limits" : "No trade";
   let html = `<div class="card"><div class="hero ${lcls}${!trade && limits.length ? " pending" : ""}">
-    <div class="verdict"><b>${title}</b><span>${esc(r.symbol)} ${r.price}</span></div>
+    <div class="verdict"><b>${title}${r.grade ? `<span class="grade ${r.grade === "A+" ? "Ap" : r.grade}">${r.grade}</span>` : ""}</b><span>${esc(r.name || r.symbol)} ${r.price}</span></div>
     <div class="sub">${sub}</div></div>`;
 
   if (trade) {
@@ -298,6 +428,119 @@ function render(r) {
 function clock(mins) {
   return new Date(Date.now() + mins * 60000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
+
+// ---------- tabs ----------
+document.querySelector(".tabs").onclick = e => { const b = e.target.closest("button"); if (!b) return;
+  document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
+  $("#tab-signal").classList.toggle("hidden", b.dataset.t !== "signal");
+  $("#tab-scanner").classList.toggle("hidden", b.dataset.t !== "scanner");
+  if (b.dataset.t === "scanner") loadScanner();
+};
+
+// ---------- scanner ----------
+let SC = null, scTimer = null, watchSel = new Set(), seenAlert = store.get("seenAlert", 0);
+const ago = t => { if (!t) return "never"; const s = Math.round(Date.now() / 1000 - t);
+  return s < 60 ? s + "s ago" : s < 3600 ? Math.round(s / 60) + " min ago" : Math.round(s / 3600) + " h ago"; };
+const hhmm = t => new Date(t * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+async function loadScanner() {
+  clearInterval(scTimer); scTimer = setInterval(() => !$("#tab-scanner").classList.contains("hidden") && refreshScanner(), 30000);
+  await refreshScanner(true);
+}
+async function refreshScanner(fillForm = false) {
+  try {
+    const res = await api("/api/scanner"); SC = await res.json();
+    if (!res.ok) throw new Error(SC.detail || "Error");
+  } catch (e) { $("#scStatus").textContent = e.message; return; }
+  const st = SC.settings, cr = SC.credits;
+  $("#scEnabled").checked = st.enabled;
+  const fresh = SC.last_scan && Date.now() / 1000 - SC.last_scan < 180;
+  $("#scStatus").innerHTML = !st.enabled ? '<span class="bad">Off</span>'
+    : fresh ? '<span class="ok">Running</span>' : '<span class="bad">Waiting for the every-minute scan link</span>';
+  $("#scLast").textContent = ago(SC.last_scan);
+  $("#scChannels").innerHTML = SC.channels.length ? `<span class="ok">${SC.channels.join(" + ")}</span>` : '<span class="bad">Not set up</span>';
+  $("#scCredits").textContent = cr.per_day ? `${cr.used_today} / ${cr.per_day}` : `${cr.used_today} (no daily cap)`;
+  $("#scNote").textContent = [SC.live ? "" : "DEMO data — alerts are not sent to your phone.", SC.note,
+                              ...(SC.notify_errors || [])].filter(Boolean).join(" ");
+  // alerts
+  $("#scAlerts").innerHTML = SC.alerts.length ? SC.alerts.map(a => `<div class="item"><b>${esc(a.title)}</b>
+      <span class="muted"> · ${hhmm(a.time)}${a.sent ? " · sent ✓" : a.demo ? " · demo" : " · not sent"}</span>
+      <pre>${esc(a.body)}</pre></div>`).join("") : '<div class="muted">No alerts yet. They appear here and on your phone.</div>';
+  const newest = SC.alerts[0] ? SC.alerts[0].time : 0;
+  $("#scanDot").classList.toggle("hidden", !(newest > seenAlert));
+  if (!$("#tab-scanner").classList.contains("hidden")) { seenAlert = newest; store.set("seenAlert", newest); $("#scanDot").classList.add("hidden"); }
+  // latest per market
+  const rows = Object.values(SC.latest).sort((a, b) => (b.symbol === "XAU/USD") - (a.symbol === "XAU/USD") || (b.score || 0) - (a.score || 0));
+  $("#scLatest").innerHTML = rows.length ? rows.map(r => {
+    const name = (BY[r.symbol] || {}).name || r.symbol;
+    const what = r.error ? `<span class="bad">error</span>` : r.signal === "NO TRADE"
+      ? (r.limit ? `<span class="muted">${r.limit.side.toLowerCase()} ${r.limit.entry}</span>` : '<span class="muted">no trade</span>')
+      : `<b class="${r.signal === "BUY" ? "ok" : "bad"}">${r.signal}</b><span class="grade ${r.grade === "A+" ? "Ap" : r.grade}" style="vertical-align:0">${r.grade}</span>`;
+    return `<div class="row3"><div>${r.symbol === "XAU/USD" ? '<span class="star" style="color:#f2b544">★</span> ' : ""}${esc(name)}
+      <span class="muted" style="font-size:11px">${(r.interval || "").replace("min", "m")}</span></div><div>${what}</div>
+      <div class="muted" style="text-align:right">${ago(r.time)}</div></div>`; }).join("") : '<div class="muted">Nothing scanned yet.</div>';
+  if (fillForm) fillScannerForm();
+  budget();
+}
+function fillScannerForm() {
+  const st = SC.settings;
+  $("#scGoldTf").value = st.gold_tf; $("#scOtherTf").value = st.other_tf;
+  $("#scGoldGrade").value = st.gold_grade; $("#scOtherGrade").value = st.other_grade;
+  $("#scLimit").checked = st.limit_alerts;
+  watchSel = new Set(st.watch);
+  $("#scWatch").innerHTML = CATS.map(c => {
+    const ms = MARKETS.filter(m => m.category === c);
+    return `<div class="wl-cat">${c}</div><div class="wl">${ms.map(m => `<label class="${m.locked ? "locked" : ""}${watchSel.has(m.symbol) ? " on" : ""}" data-v="${m.symbol}">
+      <input type="checkbox" ${watchSel.has(m.symbol) ? "checked" : ""} ${m.locked ? "disabled" : ""}>${m.symbol === "XAU/USD" ? "★ " : ""}${esc(m.name)}${m.locked ? " 🔒" : ""}</label>`).join("")}</div>`;
+  }).join("");
+}
+$("#scWatch").onclick = e => { const l = e.target.closest("label"); if (!l || l.classList.contains("locked")) return;
+  e.preventDefault(); const v = l.dataset.v;
+  watchSel.has(v) ? watchSel.delete(v) : watchSel.add(v); l.classList.toggle("on", watchSel.has(v)); budget(); };
+["#scGoldTf", "#scOtherTf"].forEach(id => $(id).onchange = budget);
+
+// same maths as the server: candles checked per day + higher-timeframe refreshes
+const TFMIN = { "1min": 1, "5min": 5, "15min": 15 }, HTFREF = { "1min": 15, "5min": 60, "15min": 60 };
+function budget() {
+  if (!SC) return;
+  const st = SC.settings, win = (st.end_hour - st.start_hour) * 60;
+  let total = 0, n = 0;
+  watchSel.forEach(sym => { if (!BY[sym] || BY[sym].locked) return; n++;
+    const tf = sym === "XAU/USD" ? $("#scGoldTf").value : $("#scOtherTf").value;
+    total += win / TFMIN[tf] + win / HTFREF[tf]; });
+  total = Math.round(total);
+  const cap = SC.estimate.budget;
+  const pct = cap ? Math.min(100, total / cap * 100) : 30;
+  $("#scMeter").style.width = pct + "%"; $("#scMeter").className = cap && total > cap ? "over" : "";
+  $("#scBudget").innerHTML = cap
+    ? (total > cap ? `<span class="bad">${n} markets need ~${total} of ${cap} daily data. Too much — choose fewer markets or slower checks. Gold is always kept.</span>`
+                   : `${n} markets use ~${total} of ${cap} daily data (100 more kept for your own taps).`)
+    : `${n} markets · ~${total} requests a day (paid plan, no daily cap).`;
+}
+$("#scSave").onclick = async () => {
+  const body = { watch: [...watchSel], gold_tf: $("#scGoldTf").value, other_tf: $("#scOtherTf").value,
+    gold_grade: $("#scGoldGrade").value, other_grade: $("#scOtherGrade").value, limit_alerts: $("#scLimit").checked,
+    balance: state.balance, risk: state.risk, cent: state.cent, enabled: $("#scEnabled").checked };
+  try {
+    const res = await api("/api/scanner/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!res.ok) throw new Error("Could not save");
+    $("#scSaved").textContent = "Saved ✓ (uses your balance $" + state.balance + " and risk " + state.risk + "% from the Signal tab)";
+    refreshScanner(true);
+  } catch (e) { $("#scSaved").textContent = e.message; }
+};
+$("#scEnabled").onchange = async e => {
+  await api("/api/scanner/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled: e.target.checked }) });
+  refreshScanner();
+};
+$("#scTest").onclick = async () => {
+  const b = $("#scTest"); b.textContent = "Sending…";
+  try { const d = await (await api("/api/notify/test", { method: "POST" })).json();
+        b.textContent = d.ok ? "Sent ✓ — check your phone" : "Failed: " + d.errors.join(" "); }
+  catch (e) { b.textContent = e.message; }
+  setTimeout(() => b.textContent = "Send test notification", 6000);
+};
+// check for new alerts in the background so the Scanner tab shows a dot
+setInterval(() => document.visibilityState === "visible" && $("#tab-scanner").classList.contains("hidden") && refreshScanner(), 60000);
 
 // ---------- alert when a trade appears ----------
 function alertTrade() {
