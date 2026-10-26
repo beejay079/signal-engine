@@ -26,9 +26,9 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response
 
 import markets as mk          # must load before the engine is used: registers all markets
 import data
-import limit_orders as lo
 import notify
 import scanner
+import setups
 import signal_engine as se
 
 app = FastAPI(title="Signal Engine")
@@ -77,9 +77,7 @@ def signal(symbol: str = "XAU/USD", tf: str = "1min", balance: float = 100.0,
     try:
         df = data.candles(symbol, tf, 500, max_age=20 if tf == "1min" else 60)
         htf_df = data.candles(symbol, se.HIGHER_TF[tf], 300, max_age=scanner.htf_refresh_minutes(tf) * 60)
-        result = se.generate_signal(symbol, tf, balance, risk, cent=cent, df=df, htf_df=htf_df)
-        lo.add_limit_orders(result, symbol, tf, df, balance, risk, cent)   # pending order if no entry now
-        scanner.add_grade(result, balance, risk)
+        result = scanner.analyze(symbol, tf, df, htf_df, balance, risk, cent)
         result["demo"] = not data.live()
         result["name"] = mk.BY_SYMBOL[symbol]["name"]
     except data.Busy as e:
@@ -90,6 +88,12 @@ def signal(symbol: str = "XAU/USD", tf: str = "1min", balance: float = 100.0,
             msg += " - this market's code may differ on your data plan."
         return JSONResponse({"error": msg}, status_code=502)
     return as_json(result)
+
+
+@app.post("/api/setup/clear")
+def setup_clear(symbol: str, tf: str, x_app_password: str | None = Header(default=None)):
+    check_password(x_app_password)
+    return dict(cleared=setups.clear(symbol, tf))
 
 
 @app.get("/api/scan")

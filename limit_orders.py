@@ -9,7 +9,7 @@ Uses the same candles and engine (signal_engine.py is not modified):
        order block, unfilled fair value gap, support/resistance cluster,
        previous-day high/low, 50-61.8% Fibonacci zone.
      Zones that overlap are merged into "confluence" - more overlap = better.
-  3. Entry at the first touch of the zone, SL beyond the zone, TP1 = 1:2, TP2 = 1:3
+  3. Entry at the zone edge (a fixed price), SL beyond the zone (min 0.8 ATR), TP1 = 1:2, TP2 = 1:3
      (capped before the next strong level). Rejected if a level blocks TP1.
   4. Expires after EXPIRY_BARS candles - cancel if not filled.
 """
@@ -104,13 +104,13 @@ def _plan(c, symbol, d, price, balance, risk, cent, digits):
     for conf, _, entry, far, names in scored:
         if d == 1:
             sl = far - 0.2 * a - spread
-            dist = min(max(entry - sl, 0.5 * a), 2.5 * a)
+            dist = min(max(entry - sl, 0.8 * a), 2.5 * a)
             sl = entry - dist
             obstacles = list(c.resistances) + [c.prev_day_high] + ([c.bear_ob[0]] if c.bear_ob else [])
             obstacles = [x for x in obstacles if x and x > max(price, entry) + 0.3 * a]
         else:
             sl = far + 0.2 * a + spread
-            dist = min(max(sl - entry, 0.5 * a), 2.5 * a)
+            dist = min(max(sl - entry, 0.8 * a), 2.5 * a)
             sl = entry + dist
             obstacles = list(c.supports) + [c.prev_day_low] + ([c.bull_ob[1]] if c.bull_ob else [])
             obstacles = [x for x in obstacles if x and x < min(price, entry) - 0.3 * a]
@@ -129,6 +129,7 @@ def _plan(c, symbol, d, price, balance, risk, cent, digits):
             sl_distance=round(dist, digits), distance_from_price=round(abs(price - entry), digits),
             lot_size=lots, risk_amount=round(risk_amt, 2), lot_note=note,
             zone=" + ".join(names), confluence=conf,
+            sl_reason=f"Beyond the zone {'low' if d == 1 else 'high'} + buffer",
             expires_in_minutes=EXPIRY_BARS * c.minutes,
         ), None
     return None, reason

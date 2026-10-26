@@ -162,6 +162,10 @@
   .row3:first-child { border-top: 0; }
   .ok { color: var(--buy); } .bad { color: var(--sell); }
   .hidden { display: none !important; }
+  .st { font: 700 12px Inter, sans-serif; padding: 3px 8px; border-radius: 6px; white-space: nowrap; }
+  .st-wait { background: rgba(242,181,68,.15); color: var(--wait); } .st-open { background: rgba(77,163,255,.15); color: var(--accent); }
+  .st-win { background: rgba(31,199,126,.15); color: var(--buy); } .st-loss { background: rgba(255,84,104,.15); color: var(--sell); }
+  .st-off { background: var(--panel-2); color: var(--muted); }
   .foot { color: var(--faint); font-size: 11px; text-align: center; margin-top: 22px; line-height: 1.5; }
   .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(6,17,31,.3);
     border-top-color: #06111f; border-radius: 50%; animation: s .7s linear infinite; vertical-align: -2px; margin-right: 8px; }
@@ -341,8 +345,8 @@ async function getSignal(silent = false) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || data.detail || "Something went wrong");
     render(data);
-    if (data.signal !== "NO TRADE" && lastSignal !== data.signal + data.entry) alertTrade();
-    lastSignal = data.signal === "NO TRADE" ? null : data.signal + data.entry;
+    if (data.setup && data.setup.new && lastSignal !== data.setup.id) alertTrade();
+    lastSignal = data.setup ? data.setup.id : null;
   } catch (err) {
     $("#out").innerHTML = `<div class="card"><div class="err">${esc(err.message)}</div></div>`;
   } finally {
@@ -364,47 +368,57 @@ function render(r) {
   const sub = `${r.interval}: <b>${esc(r.regime)}</b> (${esc(r.regime_reason)}) · ${r.buy_votes} buy / ${r.sell_votes} sell${conf}
                <br>${r.htf} trend: <b>${esc(r.htf_bias)}</b> · checked ${now}`;
 
-  const limits = r.limit_orders || [];
-  const lcls = !trade && limits.length === 1 ? (limits[0].side.startsWith("BUY") ? "buy" : "sell") : cls;
-  const title = trade ? r.signal + " now" : limits.length === 1 ? limits[0].side.replace("LIMIT", "limit")
-              : limits.length > 1 ? "Range limits" : "No trade";
-  let html = `<div class="card"><div class="hero ${lcls}${!trade && limits.length ? " pending" : ""}">
-    <div class="verdict"><b>${title}${r.grade ? `<span class="grade ${r.grade === "A+" ? "Ap" : r.grade}">${r.grade}</span>` : ""}</b><span>${esc(r.name || r.symbol)} ${r.price}</span></div>
-    <div class="sub">${sub}</div></div>`;
-
-  if (trade) {
-    const lv = (k, v, x, c = "") => `<div class="lv ${c}" data-copy="${v}"><div class="k">${k}</div><div class="v">${v}</div><div class="x">${x}</div></div>`;
-    html += `<div class="levels">
-      ${lv("Entry (market)", r.entry, "tap to copy")}
-      ${lv("Lot size", r.lot_size, "risk $" + r.risk_amount)}
-      ${lv("Stop loss", r.stop_loss, "−" + r.sl_distance, "sl")}
-      ${lv("Take profit 1", r.take_profit_1, r.rr_tp1, "tp")}
-      ${lv("Take profit 2", r.take_profit_2, r.rr_tp2, "tp")}
-      ${lv("Agreement", r.confidence + "%", r.buy_votes + " buy / " + r.sell_votes + " sell")}
-    </div>
-    <div class="section"><h3>Entry triggers</h3>${r.triggers.map(esc).join(" · ")}</div>`;
-  } else if (limits.length) {
-    const lv = (k, v, x, c = "") => `<div class="lv ${c}" data-copy="${v}"><div class="k">${k}</div><div class="v">${v}</div><div class="x">${x}</div></div>`;
-    limits.forEach(p => {
-      const buy = p.side.startsWith("BUY");
-      html += `${limits.length > 1 ? `<div class="section sidehead ${buy ? "b" : "s"}">${p.side}</div>` : ""}
+  const lv = (k, v, x, c = "") => `<div class="lv ${c}" data-copy="${v}"><div class="k">${k}</div><div class="v">${v}</div><div class="x">${x}</div></div>`;
+  const gradeTag = g => g ? `<span class="grade ${g === "A+" ? "Ap" : g}">${g}</span>` : "";
+  const ST = { "WAITING": ["Waiting for fill", "st-wait"], "FILLED": ["Filled — in trade", "st-open"], "IN TRADE": ["In trade", "st-open"],
+               "TP1 HIT": ["TP1 hit ✓", "st-win"], "STOPPED": ["Stopped out", "st-loss"], "EXPIRED": ["Expired — cancel it", "st-off"],
+               "MISSED": ["Missed — price left without filling", "st-off"], "INVALID": ["Invalid — zone broke", "st-off"],
+               "CANCELLED": ["Cancelled (other side filled)", "st-off"], "CLEARED": ["Cleared", "st-off"] };
+  const st = o => `<span class="st ${ST[o.status][1]}">${ST[o.status][0]}</span>`;
+  let html;
+  const S = r.setup;
+  if (S) {
+    const os = S.orders, live = os.filter(o => ["WAITING", "FILLED", "IN TRADE"].includes(o.status));
+    const main = live[0] || os[0], buy = main.side.startsWith("BUY");
+    const title = os.length > 1 && live.length > 1 ? "Range limits"
+                : main.kind === "market" ? `${main.side} ${S.new ? "now" : "— in trade"}` : main.side.replace("LIMIT", "limit");
+    html = `<div class="card"><div class="hero ${buy ? "buy" : "sell"}${main.kind === "limit" ? " pending" : ""}">
+      <div class="verdict"><b>${title}${gradeTag(S.grade)}</b><span>${esc(r.name || r.symbol)} ${r.price}</span></div>
+      <div class="sub">${S.new ? "New setup" : `🔒 Locked since ${hhmm(S.created)} — levels stay fixed until it finishes`}<br>${sub}</div></div>`;
+    os.forEach(o => {
+      const b = o.side.startsWith("BUY");
+      const dist = Math.abs(r.price - o.entry);
+      html += `${os.length > 1 ? `<div class="section sidehead ${b ? "b" : "s"}">${o.side}</div>` : ""}
       <div class="levels">
-        ${lv(p.side.replace(" LIMIT", " limit at"), p.entry, (buy ? "▼ " : "▲ ") + p.distance_from_price + " from price")}
-        ${lv("Lot size", p.lot_size, "risk $" + p.risk_amount)}
-        ${lv("Stop loss", p.stop_loss, "−" + p.sl_distance, "sl")}
-        ${lv("Take profit 1", p.take_profit_1, p.rr_tp1, "tp")}
-        ${lv("Take profit 2", p.take_profit_2, p.rr_tp2, "tp")}
-        ${lv("Cancel at", clock(p.expires_in_minutes), "if not filled (" + p.expires_in_minutes + " min)")}
+        ${lv(o.kind === "market" ? "Entry (market)" : o.side.replace(" LIMIT", " limit at"), o.entry,
+             o.kind === "market" ? "entered at" : (b ? "▼ " : "▲ ") + dist.toFixed(r.price < 50 ? 5 : 2) + " from price")}
+        ${lv("Lot size", o.lot_size, "risk $" + Number(o.risk_amount).toFixed(2))}
+        ${lv("Stop loss", o.stop_loss, esc(o.sl_reason || "beyond the zone"), "sl")}
+        ${lv("Take profit 1", o.take_profit_1, "1:2", "tp")}
+        ${lv("Take profit 2", o.take_profit_2, o.rr_tp2 || "1:3", "tp")}
+        <div class="lv"><div class="k">Status</div><div class="v" style="font-size:14px">${st(o)}</div>
+          <div class="x">${o.status === "WAITING" && o.expires_at ? "cancel at " + hhmm(o.expires_at) : o.filled_at && o.kind === "limit" ? "filled " + hhmm(o.filled_at) : ""}</div></div>
       </div>
-      <div class="section"><h3>Zone</h3>${esc(p.zone)}${p.confluence > 1 ? ` <span class="pill">${p.confluence} confluences</span>` : ""}
-        <div class="muted">Bias: ${esc(p.bias)}</div>
-        ${p.lot_note ? `<div class="warn">⚠ ${esc(p.lot_note)}</div>` : ""}</div>`;
+      <div class="section"><h3>Why this entry is valid</h3>${esc(o.zone || "")}
+        <div class="muted">${b ? "Exit if a candle closes below" : "Exit if a candle closes above"} ${o.stop_loss} — the setup is wrong.</div>
+        ${o.lot_note ? `<div class="warn">⚠ ${esc(o.lot_note)}</div>` : ""}</div>`;
     });
-    html += `<div class="section"><h3>Why no market entry now</h3><ul>${(r.reasons || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul>
-      <div class="muted">Prices move — tap Get signal again before placing, and cancel the order if the signal changes side.</div></div>`;
+    if (!S.new) {
+      const now = r.signal === "BUY" || r.signal === "SELL" ? r.signal : (r.rejected_signal ? r.rejected_signal + " rejected" : "no new entry");
+      html += `<div class="section"><h3>Market right now</h3>${esc(now)}${r.reasons && r.reasons.length ? " — " + esc(r.reasons[0]) : ""}
+        <div class="muted">This doesn't change your setup. Clear it only if you didn't take it.</div>
+        <button class="btn2" id="clearSetup">Clear this setup</button></div>`;
+    }
   } else {
-    html += `<div class="section"><h3>Why not</h3><ul>${(r.reasons || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+    html = `<div class="card"><div class="hero wait"><div class="verdict"><b>No trade</b><span>${esc(r.name || r.symbol)} ${r.price}</span></div>
+      <div class="sub">${sub}</div></div>
+      <div class="section"><h3>Why not</h3><ul>${(r.reasons || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul>
       ${r.limit_note ? `<div class="muted">${esc(r.limit_note)}</div>` : ""}</div>`;
+  }
+  const P = r.previous_setup;
+  if (P && (!S || P.id !== S.id)) {
+    html += `<div class="section"><h3>Last setup</h3>${P.orders.map(o => `${esc(o.side)} ${o.entry} → ${st(o)}`).join("<br>")}
+      <span class="muted"> · ${hhmm(P.created)}</span></div>`;
   }
   if (r.warnings && r.warnings.length) {
     html += `<div class="section">${r.warnings.map(w => `<div class="warn">⚠ ${esc(w)}</div>`).join("")}</div>`;
@@ -419,6 +433,12 @@ function render(r) {
     </div></details></div>`;
   $("#out").innerHTML = html;
 
+  const cb = $("#clearSetup");
+  if (cb) cb.onclick = async () => {
+    if (!confirm("Clear this setup? Only do this if you didn't take the trade.")) return;
+    await api(`/api/setup/clear?symbol=${encodeURIComponent(r.symbol)}&tf=${r.interval}`, { method: "POST" });
+    getSignal();
+  };
   document.querySelectorAll(".lv[data-copy]").forEach(el => el.onclick = () => {
     navigator.clipboard && navigator.clipboard.writeText(el.dataset.copy);
     el.classList.add("copied"); setTimeout(() => el.classList.remove("copied"), 1200);
@@ -473,7 +493,9 @@ async function refreshScanner(fillForm = false) {
   const rows = Object.values(SC.latest).sort((a, b) => (b.symbol === "XAU/USD") - (a.symbol === "XAU/USD") || (b.score || 0) - (a.score || 0));
   $("#scLatest").innerHTML = rows.length ? rows.map(r => {
     const name = (BY[r.symbol] || {}).name || r.symbol;
-    const what = r.error ? `<span class="bad">error</span>` : r.signal === "NO TRADE"
+    const what = r.error ? `<span class="bad">error</span>` : r.setup
+      ? `<b class="${r.setup.side.startsWith("BUY") ? "ok" : "bad"}">${esc(r.setup.side)}</b> <span class="muted">${r.setup.entry} · ${esc(r.setup.status.toLowerCase())}</span>`
+      : r.signal === "NO TRADE"
       ? (r.limit ? `<span class="muted">${r.limit.side.toLowerCase()} ${r.limit.entry}</span>` : '<span class="muted">no trade</span>')
       : `<b class="${r.signal === "BUY" ? "ok" : "bad"}">${r.signal}</b><span class="grade ${r.grade === "A+" ? "Ap" : r.grade}" style="vertical-align:0">${r.grade}</span>`;
     return `<div class="row3"><div>${r.symbol === "XAU/USD" ? '<span class="star" style="color:#f2b544">★</span> ' : ""}${esc(name)}

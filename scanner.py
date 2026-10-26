@@ -20,7 +20,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import data
+import entry_rules
 import limit_orders as lo
+import setups
 import markets as mk
 import notify
 import signal_engine as se
@@ -170,15 +172,24 @@ def due(now_ts, s):
 
 
 # ---------------------------------------------------------------- evaluation + alerts
+def analyze(symbol, tf, df, htf_df, balance, risk, cent=False):
+    """Engine -> valid-entry rules -> limit order at a zone -> grade -> locked setup."""
+    r = se.generate_signal(symbol, tf, balance, risk, cent=cent, df=df, htf_df=htf_df)
+    entry_rules.validate(r, symbol, tf, df, balance, risk, cent)      # zone entries only, no chasing
+    lo.add_limit_orders(r, symbol, tf, df, balance, risk, cent)       # pullback entry if no market entry
+    add_grade(r, balance, risk)
+    r["setup"] = setups.sync(symbol, tf, r, df)                         # fixed until it finishes
+    r["previous_setup"] = setups.last_finished(symbol, tf)
+    return r
+
+
 def evaluate(symbol, s):
     tf = tf_for(symbol, s)
     htf = se.HIGHER_TF[tf]
     reserve = data.MANUAL_RESERVE_PER_MIN
     df = data.candles(symbol, tf, 500, max_age=20, reserve=reserve)
     htf_df = data.candles(symbol, htf, 300, max_age=htf_refresh_minutes(tf) * 60, reserve=reserve)
-    r = se.generate_signal(symbol, tf, s["balance"], s["risk"], cent=s["cent"], df=df, htf_df=htf_df)
-    lo.add_limit_orders(r, symbol, tf, df, s["balance"], s["risk"], s["cent"])
-    return add_grade(r, s["balance"], s["risk"])
+    return analyze(symbol, tf, df, htf_df, s["balance"], s["risk"], s["cent"])
 
 
 def _summary(r):
@@ -187,6 +198,9 @@ def _summary(r):
             "risk_amount", "triggers")
     out = {k: r[k] for k in keep if k in r}
     out["time"] = int(time.time())
+    if r.get("setup"):
+        o = r["setup"]["orders"][0]
+        out["setup"] = dict(side=o["side"], entry=o["entry"], status=o["status"], new=r["setup"]["new"])
     if r.get("limit_orders"):
         p = r["limit_orders"][0]
         out["limit"] = dict(side=p["side"], entry=p["entry"], confluence=p["confluence"], zone=p["zone"])
@@ -234,6 +248,9 @@ def _message(r, kind):
 
 
 def maybe_alert(r, s):
+    setup = r.get("setup")
+    if setup and not setup.get("new"):
+        return None                                   # same locked setup - already handled
     kind = _should_alert(r, s)
     if not kind:
         return None

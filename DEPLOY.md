@@ -16,13 +16,13 @@ Already have the site on Render? Do **Step 2** (replace the files), then **Steps
 
 ## Step 2 — Put the files on GitHub
 
-1. Unzip `signal-site.zip`. You'll see 12 files:
-   `app.py`, `signal_engine.py`, `limit_orders.py`, `markets.py`, `scanner.py`, `notify.py`, `data.py`,
+1. Unzip `signal-site.zip`. You'll see 14 files:
+   `app.py`, `signal_engine.py`, `limit_orders.py`, `entry_rules.py`, `setups.py`, `markets.py`, `scanner.py`, `notify.py`, `data.py`,
    `index.html`, `requirements.txt`, `Procfile`, `runtime.txt`, `DEPLOY.md`
 2. **New site:** github.com → **+** → **New repository** → name `signal-engine` → **Private** → **Create**
    → click **"uploading an existing file"**.
    **Updating:** open your `signal-engine` repo → **Add file** → **Upload files**.
-3. Drag in **all 12 files** → **Commit changes**. (Same names replace the old ones.)
+3. Drag in **all 14 files** → **Commit changes**. (Same names replace the old ones.)
 
 ---
 
@@ -92,6 +92,15 @@ timeframe, tap **Get signal**. You get BUY/SELL now with a grade, or a limit ord
 - **Alert from:** the lowest grade that buzzes your phone. Default: Gold **A and up**, others **A+ only**.
 - Hours: 08:00–21:00 Lagos time, Monday–Friday. Crypto is scanned every day.
 - The scanner uses the balance and risk from the Signal tab when you press **Save scanner settings**.
+
+**Valid entries only**
+- *BUY/SELL now* appears only when price is reacting at a zone (order block, FVG, Fibonacci 50–61.8%,
+  support/resistance, retest, liquidity sweep, pin bar/engulfing at a level). Never on a breakout candle
+  alone, never when price is more than 1.5 ATR past the 20 EMA, never when price already left the zone.
+- Stop loss goes beyond the pullback swing + buffer (at least 0.8 ATR), so normal pullbacks don't hit it.
+- Otherwise you get a *BUY/SELL LIMIT* at the zone instead.
+- **Locked setups:** once given, entry/SL/TP stay fixed until the setup is filled, hits TP1 or SL,
+  expires, or you tap *Clear this setup*. The status shows Waiting for fill → In trade → TP1 hit / Stopped.
 
 **Grades** (from 29 strategies): A+ ≥ 85 · A ≥ 75 · B ≥ 65. A trade never gets above B if the smallest
 lot (0.01) would risk much more than your risk %.
