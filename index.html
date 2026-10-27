@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0b0f14">
+<meta name="theme-color" content="#0a0d12">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Signals">
@@ -12,163 +12,200 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0b0f14; --panel: #121922; --panel-2: #18212c; --line: #243040;
-    --text: #e8eef5; --muted: #8796a8; --faint: #5b6878;
-    --buy: #1fc77e; --buy-bg: rgba(31,199,126,.12);
-    --sell: #ff5468; --sell-bg: rgba(255,84,104,.12);
-    --wait: #f2b544; --wait-bg: rgba(242,181,68,.10);
-    --accent: #4da3ff;
+    --bg: #0a0d12; --panel: #11161d; --panel-2: #171e27; --line: #222c38; --line-2: #2c3846;
+    --text: #e9eef4; --muted: #8a97a8; --faint: #5a6676;
+    --buy: #22c983; --buy-bg: rgba(34,201,131,.10); --buy-line: rgba(34,201,131,.35);
+    --sell: #ff5a6e; --sell-bg: rgba(255,90,110,.10); --sell-line: rgba(255,90,110,.35);
+    --wait: #f0b54a; --wait-bg: rgba(240,181,74,.08); --wait-line: rgba(240,181,74,.35);
+    --accent: #5aa8ff; --gold: #e8c26a;
     --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; background: var(--bg); color: var(--text);
-    font-family: Inter, system-ui, -apple-system, sans-serif; }
-  body { padding: max(16px, env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom)); }
-  .wrap { max-width: 520px; margin: 0 auto; }
+    font-family: Inter, system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased; }
+  body { padding: max(14px, env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom)); }
+  .wrap { max-width: 540px; margin: 0 auto; }
+  b { font-weight: 700; }
 
-  header { display: flex; align-items: center; justify-content: space-between; margin: 4px 0 18px; }
-  h1 { font-size: 20px; font-weight: 800; letter-spacing: -.02em; margin: 0; }
-  h1 span { color: var(--accent); }
-  .badge { font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 99px;
-    background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); }
-  .badge.live { color: var(--buy); border-color: rgba(31,199,126,.35); }
-  .badge.demo { color: var(--wait); border-color: rgba(242,181,68,.35); }
+  header { display: flex; align-items: center; justify-content: space-between; margin: 6px 0 18px; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .logo { width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(135deg, var(--gold), #b8862f);
+    display: grid; place-items: center; color: #1a1305; font: 800 14px Inter; }
+  h1 { font-size: 17px; font-weight: 800; letter-spacing: -.02em; margin: 0; line-height: 1.1; }
+  h1 small { display: block; font-size: 11px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+  .badge { font: 700 10px Inter; letter-spacing: .08em; padding: 5px 9px; border-radius: 99px;
+    background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); text-transform: uppercase; }
+  .badge.live { color: var(--buy); border-color: var(--buy-line); }
+  .badge.live::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--buy); margin-right: 6px; vertical-align: 1px; animation: pulse 2s infinite; }
+  .badge.demo { color: var(--wait); border-color: var(--wait-line); }
+  @keyframes pulse { 50% { opacity: .3; } }
 
-  .label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase;
-    letter-spacing: .08em; margin: 0 0 8px; }
+  .label { font-size: 10.5px; font-weight: 700; color: var(--muted); text-transform: uppercase;
+    letter-spacing: .1em; margin: 0 0 8px; }
   .pairs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 16px; }
   .chip { border: 1px solid var(--line); background: var(--panel); color: var(--text);
-    border-radius: 10px; padding: 11px 0; font: 600 13px Inter, sans-serif; cursor: pointer; }
+    border-radius: 10px; padding: 10px 0 9px; font: 700 13px Inter, sans-serif; cursor: pointer; }
   .chip small { display: block; font-size: 10px; color: var(--faint); font-weight: 500; margin-top: 2px; }
-  .chip.on { background: var(--accent); border-color: var(--accent); color: #06111f; }
-  .chip.on small { color: rgba(6,17,31,.7); }
+  .chip.on { background: var(--text); border-color: var(--text); color: var(--bg); }
+  .chip.on small { color: #4b5563; }
 
-  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
   .seg { display: flex; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
-  .seg button { flex: 1; border: 0; background: transparent; color: var(--muted); border-radius: 8px;
-    padding: 9px 0; font: 600 13px Inter, sans-serif; cursor: pointer; }
-  .seg button.on { background: var(--panel-2); color: var(--text); box-shadow: 0 0 0 1px var(--line); }
+  .seg button { flex: 1; border: 0; background: transparent; color: var(--muted); border-radius: 7px;
+    padding: 9px 0; font: 700 13px Inter, sans-serif; cursor: pointer; }
+  .seg button.on { background: var(--panel-2); color: var(--text); box-shadow: 0 0 0 1px var(--line-2); }
+  .stack { font: 500 11.5px var(--mono); color: var(--faint); margin: 7px 2px 16px; }
+  .stack b { color: var(--muted); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
   .field { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
     display: flex; align-items: center; padding: 0 12px; }
   .field span { color: var(--faint); font-size: 13px; }
   .field input { width: 100%; background: transparent; border: 0; color: var(--text); outline: none;
     font: 600 15px var(--mono); padding: 11px 6px; }
-  .toggles { display: flex; gap: 18px; margin: -4px 0 18px; color: var(--muted); font-size: 13px; }
+  .toggles { display: flex; gap: 18px; margin: 4px 0 16px; color: var(--muted); font-size: 13px; flex-wrap: wrap; }
   .toggles label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
   .toggles input { accent-color: var(--accent); width: 16px; height: 16px; }
 
-  .go { width: 100%; border: 0; border-radius: 14px; padding: 17px; cursor: pointer;
-    background: var(--accent); color: #06111f; font: 800 17px Inter, sans-serif; letter-spacing: -.01em; }
+  .go { width: 100%; border: 0; border-radius: 13px; padding: 16px; cursor: pointer;
+    background: var(--accent); color: #04101f; font: 800 16px Inter, sans-serif; letter-spacing: -.01em; }
   .go:disabled { opacity: .55; }
   .hint { text-align: center; color: var(--faint); font-size: 12px; margin: 10px 0 0; min-height: 16px; }
 
-  .card { margin-top: 18px; border-radius: 16px; border: 1px solid var(--line); background: var(--panel);
-    overflow: hidden; }
-  .hero { padding: 18px 18px 16px; }
-  .hero.buy { background: var(--buy-bg); } .hero.sell { background: var(--sell-bg); }
-  .hero.wait { background: var(--wait-bg); }
-  .verdict { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-  .verdict b { font-size: 34px; font-weight: 800; letter-spacing: -.03em; }
-  .buy .verdict b { color: var(--buy); } .sell .verdict b { color: var(--sell); }
-  .wait .verdict b { color: var(--wait); font-size: 26px; }
-  .verdict span { font: 600 14px var(--mono); color: var(--muted); }
-  .sub { color: var(--muted); font-size: 13px; margin-top: 6px; line-height: 1.45; }
-
-  .levels { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line); }
-  .lv { padding: 13px 18px; border-bottom: 1px solid var(--line); cursor: pointer; position: relative; }
-  .lv:nth-child(odd) { border-right: 1px solid var(--line); }
-  .lv .k { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
-  .lv .v { font: 700 18px var(--mono); margin-top: 3px; }
-  .lv .x { font-size: 11px; color: var(--faint); margin-top: 1px; }
-  .lv.sl .v { color: var(--sell); } .lv.tp .v { color: var(--buy); }
-  .lv.copied::after { content: "Copied"; position: absolute; right: 12px; top: 12px; font-size: 10px;
-    color: var(--accent); font-weight: 700; }
+  .card { margin-top: 16px; border-radius: 16px; border: 1px solid var(--line); background: var(--panel); overflow: hidden; }
+  .hero { padding: 18px 18px 16px; border-bottom: 1px solid var(--line); }
+  .hero.buy { background: var(--buy-bg); } .hero.sell { background: var(--sell-bg); } .hero.wait { background: var(--wait-bg); }
+  .top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .verdict { font-size: 32px; font-weight: 800; letter-spacing: -.035em; line-height: 1; }
+  .buy .verdict { color: var(--buy); } .sell .verdict { color: var(--sell); } .wait .verdict { color: var(--wait); }
+  .neutral .verdict { color: var(--muted); }
+  .pb { font-size: 13px; color: var(--muted); margin-top: 7px; }
+  .pb b { color: var(--text); }
+  .px { font: 700 13px var(--mono); color: var(--muted); margin-top: 8px; }
+  .grade { flex: none; width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center;
+    background: conic-gradient(var(--c, var(--accent)) calc(var(--p) * 1%), var(--line) 0); position: relative; }
+  .grade::before { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: var(--panel); }
+  .grade div { position: relative; text-align: center; line-height: 1; }
+  .grade b { display: block; font-size: 17px; font-weight: 800; }
+  .grade small { font: 600 9.5px var(--mono); color: var(--muted); }
 
   .section { padding: 14px 18px; border-bottom: 1px solid var(--line); font-size: 14px; line-height: 1.5; }
   .section:last-child { border-bottom: 0; }
-  .section h3 { margin: 0 0 6px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
-  .section ul { margin: 0; padding-left: 18px; }
-  .timer { font: 700 14px var(--mono); color: var(--wait); }
-  .warn { color: var(--wait); font-size: 13px; }
+  h3 { margin: 0 0 10px; font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; font-weight: 700; }
+
+  .ladder { display: grid; gap: 0; }
+  .step { display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; align-items: center; padding: 9px 0;
+    border-bottom: 1px dashed var(--line); }
+  .step:last-child { border-bottom: 0; padding-bottom: 0; }
+  .step:first-child { padding-top: 0; }
+  .tf { font: 700 12px var(--mono); background: var(--panel-2); border: 1px solid var(--line-2); border-radius: 7px;
+    text-align: center; padding: 5px 0; }
+  .step .d { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+  .step .d b { color: var(--text); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+  .dir { font: 700 10.5px Inter; letter-spacing: .06em; padding: 4px 8px; border-radius: 6px; }
+  .dir.BULLISH { color: var(--buy); background: var(--buy-bg); }
+  .dir.BEARISH { color: var(--sell); background: var(--sell-bg); }
+  .dir.NEUTRAL { color: var(--muted); background: var(--panel-2); }
+
+  .levels { display: grid; grid-template-columns: 1fr 1fr; }
+  .lv { padding: 13px 18px; border-bottom: 1px solid var(--line); cursor: pointer; position: relative; }
+  .lv:nth-child(odd) { border-right: 1px solid var(--line); }
+  .lv .k { font-size: 10.5px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+  .lv .v { font: 700 18px var(--mono); margin-top: 3px; }
+  .lv .x { font-size: 11px; color: var(--faint); margin-top: 1px; }
+  .lv.sl .v { color: var(--sell); } .lv.tp .v { color: var(--buy); }
+  .lv.copied::after { content: "Copied"; position: absolute; right: 12px; top: 12px; font-size: 10px; color: var(--accent); font-weight: 700; }
+  .sub-levels { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-top: 12px; }
+  .sub-levels .lv { padding: 10px 14px; } .sub-levels .lv .v { font-size: 15px; }
+  .sub-levels .lv:nth-last-child(-n+2) { border-bottom: 0; }
+
+  .checks { list-style: none; margin: 0; padding: 0; }
+  .checks li { display: grid; grid-template-columns: 20px 1fr; gap: 8px; padding: 6px 0; font-size: 13px; }
+  .checks i { font-style: normal; font-weight: 800; }
+  .checks .ok i { color: var(--buy); } .checks .no i { color: var(--sell); }
+  .checks span { color: var(--text); font-weight: 600; }
+  .checks small { display: block; color: var(--muted); font-size: 12px; line-height: 1.4; }
+
+  ul.plain { margin: 0; padding-left: 18px; } ul.plain li { margin: 3px 0; color: var(--text); font-size: 13.5px; }
+  .zone { font: 700 17px var(--mono); }
+  .muted { color: var(--muted); font-size: 13px; }
+  .warn { color: var(--wait); font-size: 13px; margin: 2px 0; }
   .err { padding: 16px 18px; color: var(--sell); }
-  .hero.pending { background: transparent; border-bottom: 1px dashed var(--line); }
-  .muted { color: var(--muted); font-size: 13px; margin-top: 6px; }
-  .pill { font-size: 11px; font-weight: 700; color: var(--accent); border: 1px solid rgba(77,163,255,.4);
-    border-radius: 99px; padding: 2px 8px; margin-left: 6px; }
-  .sidehead { font: 800 13px Inter, sans-serif; letter-spacing: .06em; }
-  .sidehead.b { color: var(--buy); } .sidehead.s { color: var(--sell); }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag { font-size: 11.5px; padding: 4px 8px; border-radius: 6px; background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); }
+
+  .pbs .p { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 7px 0;
+    border-bottom: 1px dashed var(--line); font-size: 13px; }
+  .pbs .p:last-child { border-bottom: 0; }
+  .pbs .p small { display: block; color: var(--faint); font-size: 11.5px; }
+  .pbs .g { font: 700 12px var(--mono); padding: 3px 7px; border-radius: 6px; background: var(--panel-2); }
+  .pbs .g.v { color: var(--buy); background: var(--buy-bg); }
+  .pbs .n { font: 600 11px var(--mono); color: var(--faint); }
 
   details { border-top: 1px solid var(--line); }
-  summary { padding: 14px 18px; cursor: pointer; color: var(--accent); font-weight: 600; font-size: 14px; list-style: none; }
+  summary { padding: 14px 18px; cursor: pointer; color: var(--accent); font-weight: 600; font-size: 13.5px; list-style: none; }
   summary::-webkit-details-marker { display: none; }
   .votes { padding: 0 18px 14px; }
-  .votes h4 { margin: 12px 0 6px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
-  .vote { display: grid; grid-template-columns: 40px 1fr; gap: 8px; padding: 6px 0; font-size: 13px;
-    border-bottom: 1px dashed var(--line); }
+  .votes h4 { margin: 12px 0 6px; font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+  .vote { display: grid; grid-template-columns: 38px 1fr; gap: 8px; padding: 5px 0; font-size: 12.5px; border-bottom: 1px dashed var(--line); }
   .vote:last-child { border-bottom: 0; }
-  .vote i { font-style: normal; font: 700 11px var(--mono); padding-top: 2px; }
+  .vote i { font-style: normal; font: 700 10.5px var(--mono); padding-top: 2px; }
   .vote i.b { color: var(--buy); } .vote i.s { color: var(--sell); }
   .vote div small { display: block; color: var(--faint); }
 
-  .foot { color: var(--faint); font-size: 11px; text-align: center; margin-top: 22px; line-height: 1.5; }
-  .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(6,17,31,.3);
-    border-top-color: #06111f; border-radius: 50%; animation: s .7s linear infinite; vertical-align: -2px; margin-right: 8px; }
+  .foot { color: var(--faint); font-size: 11px; text-align: center; margin-top: 22px; line-height: 1.55; }
+  .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(4,16,31,.3);
+    border-top-color: #04101f; border-radius: 50%; animation: s .7s linear infinite; vertical-align: -2px; margin-right: 8px; }
   @keyframes s { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1>Signal<span>Engine</span></h1>
-    <span id="mode" class="badge">29 strategies</span>
+    <div class="brand"><div class="logo">SE</div><h1>Signal Engine<small>Top-down analysis</small></h1></div>
+    <span id="mode" class="badge">Ready</span>
   </header>
 
-  <p class="label">Pair</p>
+  <p class="label">Market</p>
   <div class="pairs" id="pairs"></div>
 
-  <div class="row">
-    <div>
-      <p class="label">Timeframe</p>
-      <div class="seg" id="tf">
-        <button data-v="1min">1m</button><button data-v="5min">5m</button><button data-v="15min">15m</button><button data-v="1h">1h</button>
-      </div>
-    </div>
-    <div>
-      <p class="label">Risk per trade</p>
-      <div class="field"><input id="risk" inputmode="decimal" value="2"><span>%</span></div>
-    </div>
+  <p class="label">Entry timeframe</p>
+  <div class="seg" id="tf">
+    <button data-v="1min">1m</button><button data-v="5min">5m</button><button data-v="15min">15m</button><button data-v="1h">1h</button>
   </div>
+  <p class="stack" id="stack"></p>
 
-  <p class="label">Balance (USD)</p>
-  <div class="field" style="margin-bottom:12px"><span>$</span><input id="balance" inputmode="decimal" value="100"></div>
+  <div class="row">
+    <div><p class="label">Balance (USD)</p><div class="field"><span>$</span><input id="balance" inputmode="decimal" value="100"></div></div>
+    <div><p class="label">Risk per trade</p><div class="field"><input id="risk" inputmode="decimal" value="1"><span>%</span></div></div>
+  </div>
 
   <div class="toggles">
     <label><input type="checkbox" id="cent"> Cent account</label>
-    <label><input type="checkbox" id="watch"> Watch (check every 30s)</label>
+    <label><input type="checkbox" id="watch"> Watch &amp; alert me</label>
   </div>
 
-  <button class="go" id="go">Get signal</button>
+  <button class="go" id="go">Analyse market</button>
   <p class="hint" id="hint"></p>
 
   <div id="out"></div>
 
-  <p class="foot">Higher-timeframe filter: 1m→15m · 5m→1h · 15m→4h · 1h→4h<br>
+  <p class="foot">Only A and A+ setups are given as trades. Everything else is Wait.<br>
   Not financial advice. Check the price in MT5 and the news calendar before entering.</p>
 </div>
 
 <script>
 const PAIRS = [["XAU/USD","Gold"],["EUR/USD","EU"],["GBP/USD","GU"],["USD/JPY","UJ"],["BTC/USD","BTC"]];
+const STACKS = { "1min": ["4H","1H","15M","1M"], "5min": ["4H","1H","15M","5M"], "15min": ["D1","4H","1H","15M"], "1h": ["W1","D1","4H","1H"] };
 const $ = s => document.querySelector(s);
 const store = {
   get(k, d) { try { const v = localStorage.getItem("se_" + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem("se_" + k, JSON.stringify(v)); } catch {} },
 };
-let state = {
-  symbol: store.get("symbol", "XAU/USD"), tf: store.get("tf", "1min"),
-  balance: store.get("balance", 100), risk: store.get("risk", 2), cent: store.get("cent", false),
-};
+let state = { symbol: store.get("symbol", "XAU/USD"), tf: store.get("tf", "1min"),
+  balance: store.get("balance", 100), risk: store.get("risk", 1), cent: store.get("cent", false) };
+if (!STACKS[state.tf]) state.tf = "1min";
 let password = store.get("pw", "");
-let watchTimer = null, lastSignal = null, busy = false;
+let watchTimer = null, lastKey = null, busy = false;
 
 // ---------- controls ----------
 $("#pairs").innerHTML = PAIRS.map(([s, n]) =>
@@ -176,20 +213,25 @@ $("#pairs").innerHTML = PAIRS.map(([s, n]) =>
 function paint() {
   document.querySelectorAll("#pairs .chip").forEach(b => b.classList.toggle("on", b.dataset.v === state.symbol));
   document.querySelectorAll("#tf button").forEach(b => b.classList.toggle("on", b.dataset.v === state.tf));
+  const st = STACKS[state.tf];
+  $("#stack").innerHTML = `Bias <b>${st[0]} + ${st[1]}</b> → Setup <b>${st[2]}</b> → Entry <b>${st[3]}</b>`;
   $("#balance").value = state.balance; $("#risk").value = state.risk; $("#cent").checked = state.cent;
 }
 $("#pairs").onclick = e => { const b = e.target.closest(".chip"); if (!b) return;
-  state.symbol = b.dataset.v; store.set("symbol", state.symbol); paint(); lastSignal = null; getSignal(); };
+  state.symbol = b.dataset.v; store.set("symbol", state.symbol); paint(); lastKey = null; getSignal(); };
 $("#tf").onclick = e => { const b = e.target.closest("button"); if (!b) return;
-  state.tf = b.dataset.v; store.set("tf", state.tf); paint(); };
+  state.tf = b.dataset.v; store.set("tf", state.tf); paint(); lastKey = null; };
 $("#balance").onchange = e => { state.balance = parseFloat(e.target.value) || 100; store.set("balance", state.balance); };
-$("#risk").onchange = e => { state.risk = parseFloat(e.target.value) || 2; store.set("risk", state.risk); };
+$("#risk").onchange = e => { state.risk = parseFloat(e.target.value) || 1; store.set("risk", state.risk); };
 $("#cent").onchange = e => { state.cent = e.target.checked; store.set("cent", state.cent); };
 $("#go").onclick = () => getSignal();
 $("#watch").onchange = e => {
   clearInterval(watchTimer);
-  if (e.target.checked) { getSignal(); watchTimer = setInterval(() => getSignal(true), 30000); }
-  $("#hint").textContent = e.target.checked ? "Watching… you'll get a beep when a trade appears." : "";
+  if (e.target.checked) {
+    try { window.Notification && Notification.permission === "default" && Notification.requestPermission(); } catch {}
+    getSignal(); watchTimer = setInterval(() => getSignal(true), 30000);
+  }
+  $("#hint").textContent = e.target.checked ? "Watching every 30s — keep this page open. You'll be alerted on an A/A+ setup." : "";
 };
 paint();
 
@@ -198,9 +240,8 @@ async function getSignal(silent = false) {
   if (busy) return;
   busy = true;
   const btn = $("#go");
-  if (!silent) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Reading the market…'; }
-  const q = new URLSearchParams({ symbol: state.symbol, tf: state.tf, balance: state.balance,
-                                  risk: state.risk, cent: state.cent });
+  if (!silent) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Reading 4 timeframes…'; }
+  const q = new URLSearchParams({ symbol: state.symbol, tf: state.tf, balance: state.balance, risk: state.risk, cent: state.cent });
   try {
     const res = await fetch("/api/signal?" + q, { headers: password ? { "X-App-Password": password } : {} });
     if (res.status === 401) {
@@ -211,81 +252,100 @@ async function getSignal(silent = false) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || data.detail || "Something went wrong");
     render(data);
-    if (data.signal !== "NO TRADE" && lastSignal !== data.signal + data.entry) alertTrade();
-    lastSignal = data.signal === "NO TRADE" ? null : data.signal + data.entry;
+    if (data.status === "TRADE" && data.key !== lastKey) alertTrade(data);
+    lastKey = data.status === "TRADE" ? data.key : lastKey;
   } catch (err) {
-    $("#out").innerHTML = `<div class="card"><div class="err">${esc(err.message)}</div></div>`;
+    if (!silent) $("#out").innerHTML = `<div class="card"><div class="err">${esc(err.message)}</div></div>`;
+    else $("#hint").textContent = "Watching… last check failed: " + err.message;
   } finally {
-    busy = false; btn.disabled = false; btn.textContent = "Get signal";
+    busy = false; btn.disabled = false; btn.textContent = "Analyse market";
   }
 }
 
 // ---------- render ----------
-const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const lv = (k, v, x, c = "") => `<div class="lv ${c}" data-copy="${esc(v)}"><div class="k">${k}</div><div class="v">${esc(v)}</div><div class="x">${x}</div></div>`;
+
 function render(r) {
   const badge = $("#mode");
   badge.className = "badge " + (r.demo ? "demo" : "live");
-  badge.textContent = r.demo ? "DEMO data" : "LIVE";
+  badge.textContent = r.demo ? "Demo data" : "Live";
 
-  const trade = r.signal === "BUY" || r.signal === "SELL";
-  const cls = r.signal === "BUY" ? "buy" : r.signal === "SELL" ? "sell" : "wait";
+  const trade = r.status === "TRADE";
+  const side = trade ? r.side : (r.plan ? r.plan.side : null);
+  const cls = trade ? (r.side === "BUY" ? "buy" : "sell") : r.status === "WAIT" ? "wait" : "neutral";
   const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  const conf = r.confidence !== undefined ? ` · ${r.confidence}% agree` : "";
-  const sub = `${r.interval}: <b>${esc(r.regime)}</b> (${esc(r.regime_reason)}) · ${r.buy_votes} buy / ${r.sell_votes} sell${conf}
-               <br>${r.htf} trend: <b>${esc(r.htf_bias)}</b> · checked ${now}`;
+  const f = r.focus;
+  const gradeColor = g => g === "A+" || g === "A" ? "var(--buy)" : g === "B" ? "var(--wait)" : "var(--sell)";
+  const gradeRing = (g, s) => `<div class="grade" style="--p:${s};--c:${gradeColor(g)}"><div><b>${g}</b><small>${s}/100</small></div></div>`;
 
-  const limits = r.limit_orders || [];
-  const lcls = !trade && limits.length === 1 ? (limits[0].side.startsWith("BUY") ? "buy" : "sell") : cls;
-  const title = trade ? r.signal + " now" : limits.length === 1 ? limits[0].side.replace("LIMIT", "limit")
-              : limits.length > 1 ? "Range limits" : "No trade";
-  let html = `<div class="card"><div class="hero ${lcls}${!trade && limits.length ? " pending" : ""}">
-    <div class="verdict"><b>${title}</b><span>${esc(r.symbol)} ${r.price}</span></div>
-    <div class="sub">${sub}</div></div>`;
+  let pbLine;
+  if (trade) pbLine = `<b>${esc(r.playbook)}</b> · ${r.agreement}% strategy agreement`;
+  else if (f) pbLine = `Closest setup: <b>${esc(f.name)} ${f.side.toLowerCase()}</b>`;
+  else pbLine = esc(r.bias_text);
+
+  let html = `<div class="card"><div class="hero ${cls}"><div class="top"><div>
+      <div class="verdict">${esc(r.headline)}</div>
+      <div class="pb">${pbLine}</div>
+      <div class="px">${esc(r.symbol)} ${r.price} · ${esc(r.session)} · ${now}</div></div>
+      ${trade ? gradeRing(r.grade, r.score) : f ? gradeRing(f.grade, f.score) : ""}</div></div>`;
+
+  // top-down ladder
+  html += `<div class="section"><h3>Top-down analysis</h3><div class="ladder">${r.ladder.map(s => `
+      <div class="step"><div class="tf">${esc(s.tf)}</div>
+        <div class="d"><b>${esc(s.role)}</b> · ${esc(s.detail)}</div>
+        <span class="dir ${s.dir}">${s.dir}</span></div>`).join("")}</div></div>`;
 
   if (trade) {
-    const lv = (k, v, x, c = "") => `<div class="lv ${c}" data-copy="${v}"><div class="k">${k}</div><div class="v">${v}</div><div class="x">${x}</div></div>`;
+    const t = r.trade;
     html += `<div class="levels">
-      ${lv("Entry (market)", r.entry, "tap to copy")}
-      ${lv("Lot size", r.lot_size, "risk $" + r.risk_amount)}
-      ${lv("Stop loss", r.stop_loss, "−" + r.sl_distance, "sl")}
-      ${lv("Take profit 1", r.take_profit_1, r.rr_tp1, "tp")}
-      ${lv("Take profit 2", r.take_profit_2, r.rr_tp2, "tp")}
-      ${lv("Agreement", r.confidence + "%", r.buy_votes + " buy / " + r.sell_votes + " sell")}
+      ${lv("Entry (market)", t.entry, "tap any value to copy")}
+      ${lv("Lot size", t.lot_size, "risk $" + t.risk_amount)}
+      ${lv("Stop loss", t.stop_loss, "−" + t.sl_distance, "sl")}
+      ${lv("Take profit 1", t.take_profit_1, t.rr_tp1 + " · close half", "tp")}
+      ${lv("Take profit 2", t.take_profit_2, t.rr_tp2, "tp")}
+      ${lv("Grade", r.grade, r.score + "/100")}
     </div>
-    <div class="section"><h3>Entry triggers</h3>${r.triggers.map(esc).join(" · ")}</div>`;
-  } else if (limits.length) {
-    const lv = (k, v, x, c = "") => `<div class="lv ${c}" data-copy="${v}"><div class="k">${k}</div><div class="v">${v}</div><div class="x">${x}</div></div>`;
-    limits.forEach(p => {
-      const buy = p.side.startsWith("BUY");
-      html += `${limits.length > 1 ? `<div class="section sidehead ${buy ? "b" : "s"}">${p.side}</div>` : ""}
-      <div class="levels">
-        ${lv(p.side.replace(" LIMIT", " limit at"), p.entry, (buy ? "▼ " : "▲ ") + p.distance_from_price + " from price")}
-        ${lv("Lot size", p.lot_size, "risk $" + p.risk_amount)}
-        ${lv("Stop loss", p.stop_loss, "−" + p.sl_distance, "sl")}
-        ${lv("Take profit 1", p.take_profit_1, p.rr_tp1, "tp")}
-        ${lv("Take profit 2", p.take_profit_2, p.rr_tp2, "tp")}
-        ${lv("Cancel at", clock(p.expires_in_minutes), "if not filled (" + p.expires_in_minutes + " min)")}
-      </div>
-      <div class="section"><h3>Zone</h3>${esc(p.zone)}${p.confluence > 1 ? ` <span class="pill">${p.confluence} confluences</span>` : ""}
-        <div class="muted">Bias: ${esc(p.bias)}</div>
-        ${p.lot_note ? `<div class="warn">⚠ ${esc(p.lot_note)}</div>` : ""}</div>`;
-    });
-    html += `<div class="section"><h3>Why no market entry now</h3><ul>${(r.reasons || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul>
-      <div class="muted">Prices move — tap Get signal again before placing, and cancel the order if the signal changes side.</div></div>`;
+    <div class="section"><h3>Manage the trade</h3><ul class="plain">${r.management.map(m => `<li>${esc(m)}</li>`).join("")}</ul></div>`;
+    if (r.confluence && r.confluence.length)
+      html += `<div class="section"><h3>Strategies agreeing (${r.confluence.length})</h3><div class="tags">${r.confluence.map(n => `<span class="tag">${esc(n)}</span>`).join("")}</div></div>`;
   } else {
-    html += `<div class="section"><h3>Why not</h3><ul>${(r.reasons || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul>
-      ${r.limit_note ? `<div class="muted">${esc(r.limit_note)}</div>` : ""}</div>`;
+    if (r.reasons && r.reasons.length)
+      html += `<div class="section"><h3>Why no entry now</h3><ul class="plain">${r.reasons.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>`;
+    if (r.plan) {
+      const p = r.plan, buy = p.side === "BUY";
+      html += `<div class="section"><h3>Plan — wait for a ${buy ? "buy" : "sell"}</h3>
+        <div class="zone" style="color:var(--${buy ? "buy" : "sell"})">${p.zone_bot} – ${p.zone_top}</div>
+        <div class="muted">${esc(p.zone)}${p.confluence > 1 ? ` · ${p.confluence} confluences` : ""} · ${p.distance} from price</div>
+        <p style="margin:10px 0 0;font-size:13.5px">${esc(p.wait_for)}</p>
+        ${p.limit ? `<div class="sub-levels levels">
+            ${lv(buy ? "Buy limit" : "Sell limit", p.limit.entry, "optional — at the zone edge")}
+            ${lv("Lot size", p.limit.lot_size, "risk $" + p.limit.risk_amount)}
+            ${lv("Stop loss", p.limit.stop_loss, "beyond the zone", "sl")}
+            ${lv("TP1 / TP2", p.limit.take_profit_1 + " / " + p.limit.take_profit_2, "1:2 / next level", "tp")}
+          </div><div class="muted" style="margin-top:8px">Waiting for the ${esc(r.stack.entry)} confirmation is safer than a blind limit.</div>`
+          : p.limit_note ? `<div class="muted" style="margin-top:8px">No limit order here: ${esc(p.limit_note)}.</div>` : ""}
+      </div>`;
+    }
   }
-  if (r.warnings && r.warnings.length) {
+
+  if (f && f.checks) {
+    html += `<div class="section"><h3>${trade ? "Entry checklist" : "Checklist — " + esc(f.name) + " " + f.side.toLowerCase()}</h3><ul class="checks">${
+      f.checks.map(c => `<li class="${c.ok ? "ok" : "no"}"><i>${c.ok ? "✓" : "✗"}</i><div><span>${esc(c.item)}</span><small>${esc(c.detail)}</small></div></li>`).join("")}</ul></div>`;
+  }
+  if (r.warnings && r.warnings.length)
     html += `<div class="section">${r.warnings.map(w => `<div class="warn">⚠ ${esc(w)}</div>`).join("")}</div>`;
+
+  if (r.candidates && r.candidates.length) {
+    html += `<details><summary>Playbooks tested (${r.candidates.length})</summary><div class="votes pbs">${r.candidates.map(c => `
+      <div class="p"><div>${esc(c.name)} ${c.side.toLowerCase()}<small>${c.valid ? "all checks passed" : esc(c.fails[0] || "")}</small></div>
+      <span class="n">${c.passed}/${c.total}</span><span class="g ${c.valid ? "v" : ""}">${c.grade}</span></div>`).join("")}</div></details>`;
   }
-  const row = v => `<div class="vote"><i class="${v.vote > 0 ? "b" : "s"}">${v.vote > 0 ? "BUY" : "SELL"}</i>
-                     <div>${esc(v.strategy)}<small>${esc(v.reason)}</small></div></div>`;
-  const on = (r.votes || []).filter(v => v.active && v.vote !== 0);
-  const off = (r.votes || []).filter(v => !v.active && v.vote !== 0);
-  html += `<details><summary>See all strategy votes</summary><div class="votes">
-      <h4>Counting in ${esc(r.regime)} (${on.length})</h4>${on.map(row).join("") || "<small>None</small>"}
-      <h4>Switched off in this regime (${off.length})</h4>${off.map(row).join("") || "<small>None</small>"}
+  const row = v => `<div class="vote"><i class="${v.vote > 0 ? "b" : "s"}">${v.vote > 0 ? "BUY" : "SELL"}</i><div>${esc(v.strategy)}<small>${esc(v.reason)}</small></div></div>`;
+  const on = list => (list || []).filter(v => v.active && v.vote !== 0);
+  html += `<details><summary>All strategy votes</summary><div class="votes">
+      <h4>${esc(r.stack.setup)} setup chart (${on(r.votes.setup).length})</h4>${on(r.votes.setup).map(row).join("") || "<small class='muted'>None</small>"}
+      <h4>${esc(r.stack.entry)} entry chart (${on(r.votes.entry).length})</h4>${on(r.votes.entry).map(row).join("") || "<small class='muted'>None</small>"}
     </div></details></div>`;
   $("#out").innerHTML = html;
 
@@ -295,19 +355,20 @@ function render(r) {
   });
 }
 
-function clock(mins) {
-  return new Date(Date.now() + mins * 60000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
-
-// ---------- alert when a trade appears ----------
-function alertTrade() {
-  try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch {}
+// ---------- alert when an A/A+ trade appears ----------
+function alertTrade(r) {
+  try { navigator.vibrate && navigator.vibrate([250, 120, 250, 120, 250]); } catch {}
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    [0, .18].forEach(t => { const o = ctx.createOscillator(), g = ctx.createGain();
-      o.frequency.value = 880; o.connect(g); g.connect(ctx.destination);
+    [0, .18, .36].forEach(t => { const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = r.side === "BUY" ? 880 : 660; o.connect(g); g.connect(ctx.destination);
       g.gain.setValueAtTime(.15, ctx.currentTime + t); g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + t + .15);
       o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + .16); });
+  } catch {}
+  try {
+    if (window.Notification && Notification.permission === "granted")
+      new Notification(`${r.side} ${r.symbol} — ${r.grade} ${r.playbook}`,
+        { body: `Entry ${r.trade.entry} · SL ${r.trade.stop_loss} · TP1 ${r.trade.take_profit_1}` });
   } catch {}
 }
 </script>
