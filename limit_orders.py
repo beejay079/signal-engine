@@ -83,7 +83,8 @@ def _zones(c, d, price):
         return [x for x in z if x[1] > x[2] and lo_ok < x[2] < hi_ok]
 
 
-def _plan(c, symbol, d, price, balance, risk, cent, digits):
+def _plan(c, symbol, d, price, balance, risk, cent, digits, accept=None):
+    """accept(entry, sl, tp1, tp2) -> (ok, tp2, reason): extra checks from higher timeframes."""
     a = c.atr_now
     spread = se.SYMBOLS.get(symbol, {}).get("spread", 0.0)
     zones = _zones(c, d, price)
@@ -120,6 +121,11 @@ def _plan(c, symbol, d, price, balance, risk, cent, digits):
             continue                                     # level before TP1 -> try next zone
         if nearest is not None and (nearest - tp2) * d < 0:
             tp2 = nearest - d * 0.1 * a
+        if accept:
+            ok, tp2, why = accept(entry, sl, tp1, tp2)
+            if not ok:
+                reason = why
+                continue
         lots, note, risk_amt = se.lot_size(symbol, entry, dist, balance, risk, cent)
         return dict(
             side="BUY LIMIT" if d == 1 else "SELL LIMIT",

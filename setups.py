@@ -106,6 +106,15 @@ def sync(symbol, tf, result, df):
                 orders.append(_order("limit", p["side"], p, p["expires_in_minutes"], bar))
         if not orders:
             return None
+        # don't re-offer the same zone that just expired / was missed / broke
+        for h in history[:5]:
+            if key(h["symbol"], h["tf"]) != k or now - h["created"] > 3 * 3600:
+                continue
+            ho, no = h["orders"][0], orders[0]
+            gap = abs(no["entry"] - no["stop_loss"]) * 0.3
+            if ho["side"] == no["side"] and abs(ho["entry"] - no["entry"]) <= gap and \
+                    ho["status"] in ("EXPIRED", "MISSED", "INVALID", "STOPPED", "CLEARED"):
+                return None
         s = dict(id=f"{k}|{int(now)}", symbol=symbol, tf=tf, created=int(now),
                  bar_time=bar, orders=orders, live=True, new=True,
                  grade=result.get("grade"))
@@ -131,3 +140,36 @@ def clear(symbol, tf):
             s["live"] = False
             history.insert(0, s)
         return bool(s)
+
+
+# ---------------------------------------------------------------- your own trades
+manual: dict = {}     # symbol -> setup with one "manual" order you opened yourself
+
+
+def add_manual(symbol, side, entry, stop_loss, take_profit_1, take_profit_2=None, lot=None):
+    """Track a trade you opened in MT5 so the scanner can tell you HOLD or WITHDRAW."""
+    d = 1 if side.upper().startswith("BUY") else -1
+    dist = abs(entry - stop_loss)
+    tp1 = take_profit_1 or entry + d * 2 * dist
+    o = dict(kind="manual", side="BUY" if d == 1 else "SELL", entry=float(entry), stop_loss=float(stop_loss),
+             take_profit_1=float(tp1), take_profit_2=float(take_profit_2 or entry + d * 3 * dist),
+             rr_tp2=None, lot_size=lot, risk_amount=None, zone="Your own trade", sl_reason="",
+             lot_note="", status="IN TRADE", expires_at=None, filled_at=int(time.time()), closed_at=None)
+    now = int(time.time())
+    with _lock:
+        manual[symbol] = dict(id=f"{symbol}|manual|{now}", symbol=symbol, tf="manual", created=now,
+                              bar_time=now, orders=[o], live=True, new=True, grade=None)
+        return manual[symbol]
+
+
+def update_manual(symbol, df):
+    with _lock:
+        s = manual.get(symbol)
+        if s and s["live"]:
+            _advance(s, df)
+        return s
+
+
+def remove_manual(symbol):
+    with _lock:
+        return manual.pop(symbol, None) is not None

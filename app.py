@@ -75,9 +75,10 @@ def signal(symbol: str = "XAU/USD", tf: str = "1min", balance: float = 100.0,
     if not (balance > 0 and 0.1 <= risk <= 10):
         raise HTTPException(400, "Balance must be above 0 and risk between 0.1% and 10%")
     try:
-        df = data.candles(symbol, tf, 500, max_age=20 if tf == "1min" else 60)
-        htf_df = data.candles(symbol, se.HIGHER_TF[tf], 300, max_age=scanner.htf_refresh_minutes(tf) * 60)
-        result = scanner.analyze(symbol, tf, df, htf_df, balance, risk, cent)
+        frames = scanner.frames_for(symbol, tf, reserve=0, entry_max_age=20 if tf == "1min" else 60)
+        result = scanner.analyze(symbol, tf, frames, balance, risk, cent)
+        if result.get("setup"):
+            result["setup"]["shown"] = True          # you saw it -> it gets fill / HOLD / WITHDRAW alerts
         result["demo"] = not data.live()
         result["name"] = mk.BY_SYMBOL[symbol]["name"]
     except data.Busy as e:
@@ -94,6 +95,39 @@ def signal(symbol: str = "XAU/USD", tf: str = "1min", balance: float = 100.0,
 def setup_clear(symbol: str, tf: str, x_app_password: str | None = Header(default=None)):
     check_password(x_app_password)
     return dict(cleared=setups.clear(symbol, tf))
+
+
+@app.post("/api/trade")
+def trade_add(payload: dict = Body(...), x_app_password: str | None = Header(default=None)):
+    """Tell the site about a trade you opened yourself, so it can alert HOLD / WITHDRAW."""
+    check_password(x_app_password)
+    try:
+        sym = payload["symbol"]
+        side = payload["side"].upper()
+        entry, sl = float(payload["entry"]), float(payload["stop_loss"])
+        tp1 = float(payload["take_profit_1"]) if payload.get("take_profit_1") else None
+    except Exception:
+        raise HTTPException(400, "Need symbol, side, entry and stop_loss")
+    if sym not in mk.BY_SYMBOL or side not in ("BUY", "SELL"):
+        raise HTTPException(400, "Unknown market or side")
+    d = 1 if side == "BUY" else -1
+    if (entry - sl) * d <= 0 or (tp1 is not None and (tp1 - entry) * d <= 0):
+        raise HTTPException(400, "Stop loss must be below entry for BUY (above for SELL), and TP on the other side")
+    if sym not in scanner.state["settings"]["watch"]:
+        scanner.update_settings(dict(watch=scanner.state["settings"]["watch"] + [sym]))
+    return as_json(setups.add_manual(sym, side, entry, sl, tp1, None, payload.get("lot")))
+
+
+@app.delete("/api/trade")
+def trade_remove(symbol: str, x_app_password: str | None = Header(default=None)):
+    check_password(x_app_password)
+    return dict(removed=setups.remove_manual(symbol))
+
+
+@app.get("/api/trades")
+def trades(x_app_password: str | None = Header(default=None)):
+    check_password(x_app_password)
+    return as_json(list(setups.manual.values()))
 
 
 @app.get("/api/scan")

@@ -162,6 +162,17 @@
   .row3:first-child { border-top: 0; }
   .ok { color: var(--buy); } .bad { color: var(--sell); }
   .hidden { display: none !important; }
+  .td { padding: 12px 18px 14px; border-bottom: 1px solid var(--line); }
+  .td h3 { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; display: flex; justify-content: space-between; }
+  .tdrow { display: grid; grid-template-columns: 22px 54px 1fr; gap: 6px; padding: 6px 0; font-size: 13px; border-top: 1px dashed var(--line); align-items: start; }
+  .tdrow:first-of-type { border-top: 0; }
+  .tdrow i { font-style: normal; font-weight: 800; } .tdrow i.y { color: var(--buy); } .tdrow i.n { color: var(--sell); }
+  .tdrow b { font-weight: 700; } .tdrow small { display: block; color: var(--muted); font-size: 12px; }
+  .problems div { font-size: 13px; padding: 6px 0; border-top: 1px solid var(--line); color: var(--wait); }
+  .problems div:first-child { border-top: 0; }
+  .form4 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .form4 input { width: 100%; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: 600 14px var(--mono); }
+  .advice { font-weight: 800; font-size: 15px; }
   .st { font: 700 12px Inter, sans-serif; padding: 3px 8px; border-radius: 6px; white-space: nowrap; }
   .st-wait { background: rgba(242,181,68,.15); color: var(--wait); } .st-open { background: rgba(77,163,255,.15); color: var(--accent); }
   .st-win { background: rgba(31,199,126,.15); color: var(--buy); } .st-loss { background: rgba(255,84,104,.15); color: var(--sell); }
@@ -211,6 +222,20 @@
   <p class="hint" id="hint"></p>
 
   <div id="out"></div>
+
+  <div class="panel" style="margin-top:18px">
+    <h2>I'm in a trade <span class="muted" style="font-size:12px;font-weight:500">get HOLD / WITHDRAW alerts</span></h2>
+    <div class="seg" id="mtSide"><button data-v="BUY" class="on">BUY</button><button data-v="SELL">SELL</button></div>
+    <div class="form4">
+      <input id="mtEntry" inputmode="decimal" placeholder="Entry price">
+      <input id="mtSL" inputmode="decimal" placeholder="Stop loss">
+      <input id="mtTP" inputmode="decimal" placeholder="Take profit (optional)">
+      <input id="mtLot" inputmode="decimal" placeholder="Lot (optional)">
+    </div>
+    <button class="btn2" id="mtAdd">Watch this trade on <span id="mtSym">Gold</span></button>
+    <p class="hint" id="mtHint"></p>
+    <div id="mtList"></div>
+  </div>
   </section>
 
   <section id="tab-scanner" class="hidden">
@@ -222,6 +247,11 @@
       <div class="stat">Data used today <b id="scCredits">–</b></div>
       <div class="muted" id="scNote"></div>
       <button class="btn2" id="scTest">Send test notification</button>
+    </div>
+
+    <div class="panel">
+      <h2>Why am I not getting alerts?</h2>
+      <div class="problems" id="scProblems"><div class="muted">Checking…</div></div>
     </div>
 
     <div class="panel">
@@ -242,7 +272,14 @@
         <div><p class="label">Others checks</p><select id="scOtherTf"><option value="5min">Every 5 min</option><option value="15min">Every 15 min</option></select></div>
         <div><p class="label">Others alert from</p><select id="scOtherGrade"><option value="A+">A+ only</option><option value="A">A and up</option><option value="B">B and up</option></select></div>
       </div>
-      <div class="toggles" style="margin:14px 0 0"><label><input type="checkbox" id="scLimit"> Also alert limit-order setups (2+ confluences)</label></div>
+      <div class="toggles" style="margin:14px 0 0;flex-direction:column;gap:10px">
+        <label><input type="checkbox" id="scGoldUpd"> Gold HOLD / WITHDRAW updates every 15 min while in a trade</label>
+        <label><input type="checkbox" id="scGoldBias"> Alert when the Gold bias changes</label>
+        <label><input type="checkbox" id="scGoldLimit"> Gold limit-order setups (top-down approved)</label>
+        <label><input type="checkbox" id="scLimit"> Other markets' limit setups (2+ confluences)</label>
+        <label><input type="checkbox" id="scHello"> Morning "scanner online" message</label>
+        <label><input type="checkbox" id="scGoldHourly"> Gold status every hour (bias, plan, your trade)</label>
+      </div>
       <div id="scWatch"></div>
       <p class="label" style="margin-top:14px">Daily data budget</p>
       <div class="meter"><i id="scMeter"></i></div>
@@ -250,8 +287,8 @@
       <button class="go" id="scSave" style="margin-top:14px">Save scanner settings</button>
       <p class="hint" id="scSaved"></p>
     </div>
-    <p class="foot">Grades: A+ ≥ 85 · A ≥ 75 · B ≥ 65 — from strategy agreement, number of entry triggers,
-    higher-timeframe trend and regime. Scans 08:00–21:00 Lagos time, Mon–Fri (crypto every day).</p>
+    <p class="foot">Every check is a full top-down analysis (Daily/4H bias → 1H location → 15m pullback → 5m entry).
+    Grades: A+ ≥ 85 · A ≥ 75 · B ≥ 65 — from strategy agreement, entry triggers, higher-timeframe trend and regime. Scans 08:00–21:00 Lagos time, Mon–Fri (crypto every day).</p>
   </section>
 
   <p class="foot">Higher-timeframe filter: 1m→15m · 5m→1h · 15m→4h · 1h→4h<br>
@@ -314,7 +351,7 @@ $("#mkts").onclick = e => { const b = e.target.closest(".mk"); if (!b) return;
 // ---------- controls ----------
 function paint() {
   document.querySelectorAll("#cats .cat").forEach(b => b.classList.toggle("on", b.dataset.v === state.cat));
-  paintMarkets();
+  paintMarkets(); if (typeof paintMtSym === "function") paintMtSym();
   document.querySelectorAll("#mkts .mk").forEach(b => b.classList.toggle("on", b.dataset.v === state.symbol));
   document.querySelectorAll("#tf button").forEach(b => b.classList.toggle("on", b.dataset.v === state.tf));
   $("#balance").value = state.balance; $("#risk").value = state.risk; $("#cent").checked = state.cent;
@@ -330,7 +367,7 @@ $("#watch").onchange = e => {
   if (e.target.checked) { getSignal(); watchTimer = setInterval(() => getSignal(true), 30000); }
   $("#hint").textContent = e.target.checked ? "Watching… you'll get a beep when a trade appears." : "";
 };
-loadMarkets();
+loadMarkets().then(() => { loadTrades(); setInterval(() => document.visibilityState === "visible" && loadTrades(), 60000); });
 
 // ---------- fetch ----------
 async function getSignal(silent = false) {
@@ -413,7 +450,14 @@ function render(r) {
     html = `<div class="card"><div class="hero wait"><div class="verdict"><b>No trade</b><span>${esc(r.name || r.symbol)} ${r.price}</span></div>
       <div class="sub">${sub}</div></div>
       <div class="section"><h3>Why not</h3><ul>${(r.reasons || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul>
-      ${r.limit_note ? `<div class="muted">${esc(r.limit_note)}</div>` : ""}</div>`;
+      ${r.limit_note && !(r.reasons || []).includes(r.limit_note) ? `<div class="muted">${esc(r.limit_note)}</div>` : ""}</div>`;
+  }
+  const T = r.topdown;
+  if (T) {
+    const tdHtml = `<div class="td"><h3><span>Top-down · ${esc(T.stack)}</span><span>${T.passed}/${T.total} ✓</span></h3>
+      ${T.steps.map(x => `<div class="tdrow"><i class="${x.ok ? "y" : "n"}">${x.ok ? "✓" : "✗"}</i><b>${esc(x.tf)}</b>
+        <div>${esc(x.role)}: ${esc(x.dir)}<small>${esc(x.detail)}</small></div></div>`).join("")}</div>`;
+    html = html.replace("</div></div>", "</div></div>" + tdHtml);   // right after the hero
   }
   const P = r.previous_setup;
   if (P && (!S || P.id !== S.id)) {
@@ -447,6 +491,36 @@ function render(r) {
 
 function clock(mins) {
   return new Date(Date.now() + mins * 60000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+// ---------- my trades ----------
+let mtSide = "BUY";
+$("#mtSide").onclick = e => { const b = e.target.closest("button"); if (!b) return; mtSide = b.dataset.v;
+  document.querySelectorAll("#mtSide button").forEach(x => x.classList.toggle("on", x === b)); };
+function paintMtSym() { $("#mtSym").textContent = (BY[state.symbol] || {}).name || state.symbol; }
+$("#mtAdd").onclick = async () => {
+  const body = { symbol: state.symbol, side: mtSide, entry: $("#mtEntry").value, stop_loss: $("#mtSL").value,
+                 take_profit_1: $("#mtTP").value || null, lot: $("#mtLot").value || null };
+  try {
+    const res = await api("/api/trade", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const d = await res.json(); if (!res.ok) throw new Error(d.detail || "Could not add");
+    $("#mtHint").textContent = "Watching ✓ — you'll get HOLD / WITHDRAW alerts while the scanner runs.";
+    ["#mtEntry", "#mtSL", "#mtTP", "#mtLot"].forEach(id => $(id).value = ""); loadTrades();
+  } catch (e) { $("#mtHint").textContent = e.message; }
+};
+async function loadTrades() {
+  try {
+    const list = await (await api("/api/trades")).json();
+    $("#mtList").innerHTML = list.map(t => { const o = t.orders[0], a = o.advice || {};
+      return `<div class="feed"><div class="item"><b>${esc((BY[t.symbol] || {}).name || t.symbol)} ${o.side} @ ${o.entry}</b>
+        <span class="muted"> · SL ${o.stop_loss} · TP ${o.take_profit_1}</span>
+        <div class="advice ${String(a.verdict || "").startsWith("HOLD") ? "ok" : a.verdict ? "bad" : ""}">${esc(a.verdict || o.status)}
+          ${a.progress !== undefined ? `<span class="muted" style="font-weight:500"> ${a.progress >= 0 ? "+" : ""}${a.progress}R</span>` : ""}</div>
+        ${(a.warnings || []).map(w => `<div class="warn">⚠ ${esc(w)}</div>`).join("")}
+        <button class="btn2" data-rm="${esc(t.symbol)}">I closed it — stop watching</button></div></div>`; }).join("");
+    document.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => {
+      await api("/api/trade?symbol=" + encodeURIComponent(b.dataset.rm), { method: "DELETE" }); loadTrades(); });
+  } catch {}
 }
 
 // ---------- tabs ----------
@@ -499,8 +573,11 @@ async function refreshScanner(fillForm = false) {
       ? (r.limit ? `<span class="muted">${r.limit.side.toLowerCase()} ${r.limit.entry}</span>` : '<span class="muted">no trade</span>')
       : `<b class="${r.signal === "BUY" ? "ok" : "bad"}">${r.signal}</b><span class="grade ${r.grade === "A+" ? "Ap" : r.grade}" style="vertical-align:0">${r.grade}</span>`;
     return `<div class="row3"><div>${r.symbol === "XAU/USD" ? '<span class="star" style="color:#f2b544">★</span> ' : ""}${esc(name)}
-      <span class="muted" style="font-size:11px">${(r.interval || "").replace("min", "m")}</span></div><div>${what}</div>
+      <span class="muted" style="font-size:11px">${(r.interval || "").replace("min", "m")}</span>
+      ${r.checklist ? `<div class="muted" style="font-size:11px">${esc(r.checklist)}</div>` : ""}</div><div>${what}</div>
       <div class="muted" style="text-align:right">${ago(r.time)}</div></div>`; }).join("") : '<div class="muted">Nothing scanned yet.</div>';
+  $("#scProblems").innerHTML = SC.problems.length ? SC.problems.map(p => `<div>⚠ ${esc(p)}</div>`).join("")
+    : '<div class="ok" style="color:var(--buy)">✓ Everything is set up. Alerts come only when the top-down passes — quiet days are normal.</div>';
   if (fillForm) fillScannerForm();
   budget();
 }
@@ -509,6 +586,8 @@ function fillScannerForm() {
   $("#scGoldTf").value = st.gold_tf; $("#scOtherTf").value = st.other_tf;
   $("#scGoldGrade").value = st.gold_grade; $("#scOtherGrade").value = st.other_grade;
   $("#scLimit").checked = st.limit_alerts;
+  $("#scGoldUpd").checked = st.gold_updates; $("#scGoldBias").checked = st.gold_bias_alerts;
+  $("#scGoldLimit").checked = st.gold_limit_alerts; $("#scHello").checked = st.morning_hello; $("#scGoldHourly").checked = st.gold_hourly;
   watchSel = new Set(st.watch);
   $("#scWatch").innerHTML = CATS.map(c => {
     const ms = MARKETS.filter(m => m.category === c);
@@ -522,14 +601,20 @@ $("#scWatch").onclick = e => { const l = e.target.closest("label"); if (!l || l.
 ["#scGoldTf", "#scOtherTf"].forEach(id => $(id).onchange = budget);
 
 // same maths as the server: candles checked per day + higher-timeframe refreshes
-const TFMIN = { "1min": 1, "5min": 5, "15min": 15 }, HTFREF = { "1min": 15, "5min": 60, "15min": 60 };
+function costPerDay(sym, tf, win) {
+  const gold = sym === "XAU/USD";
+  return SC.stacks[tf].reduce((t, f) => {
+    let m = f === tf ? SC.tf_minutes[tf] : SC.refresh[f];
+    if (!gold && f !== tf && !["15min", "5min", "1min"].includes(f)) m = Math.max(m, 60);
+    return t + win / m; }, 0);
+}
 function budget() {
   if (!SC) return;
   const st = SC.settings, win = (st.end_hour - st.start_hour) * 60;
   let total = 0, n = 0;
   watchSel.forEach(sym => { if (!BY[sym] || BY[sym].locked) return; n++;
     const tf = sym === "XAU/USD" ? $("#scGoldTf").value : $("#scOtherTf").value;
-    total += win / TFMIN[tf] + win / HTFREF[tf]; });
+    total += costPerDay(sym, tf, win); });
   total = Math.round(total);
   const cap = SC.estimate.budget;
   const pct = cap ? Math.min(100, total / cap * 100) : 30;
@@ -542,6 +627,8 @@ function budget() {
 $("#scSave").onclick = async () => {
   const body = { watch: [...watchSel], gold_tf: $("#scGoldTf").value, other_tf: $("#scOtherTf").value,
     gold_grade: $("#scGoldGrade").value, other_grade: $("#scOtherGrade").value, limit_alerts: $("#scLimit").checked,
+    gold_updates: $("#scGoldUpd").checked, gold_bias_alerts: $("#scGoldBias").checked,
+    gold_limit_alerts: $("#scGoldLimit").checked, morning_hello: $("#scHello").checked, gold_hourly: $("#scGoldHourly").checked,
     balance: state.balance, risk: state.risk, cent: state.cent, enabled: $("#scEnabled").checked };
   try {
     const res = await api("/api/scanner/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });

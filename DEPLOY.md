@@ -16,13 +16,13 @@ Already have the site on Render? Do **Step 2** (replace the files), then **Steps
 
 ## Step 2 — Put the files on GitHub
 
-1. Unzip `signal-site.zip`. You'll see 14 files:
-   `app.py`, `signal_engine.py`, `limit_orders.py`, `entry_rules.py`, `setups.py`, `markets.py`, `scanner.py`, `notify.py`, `data.py`,
+1. Unzip `signal-site.zip`. You'll see 16 files:
+   `app.py`, `signal_engine.py`, `topdown.py`, `manage.py`, `limit_orders.py`, `entry_rules.py`, `setups.py`, `markets.py`, `scanner.py`, `notify.py`, `data.py`,
    `index.html`, `requirements.txt`, `Procfile`, `runtime.txt`, `DEPLOY.md`
 2. **New site:** github.com → **+** → **New repository** → name `signal-engine` → **Private** → **Create**
    → click **"uploading an existing file"**.
    **Updating:** open your `signal-engine` repo → **Add file** → **Upload files**.
-3. Drag in **all 14 files** → **Commit changes**. (Same names replace the old ones.)
+3. Drag in **all 16 files** → **Commit changes**. (Same names replace the old ones.)
 
 ---
 
@@ -93,6 +93,21 @@ timeframe, tap **Get signal**. You get BUY/SELL now with a grade, or a limit ord
 - Hours: 08:00–21:00 Lagos time, Monday–Friday. Crypto is scanned every day.
 - The scanner uses the balance and risk from the Signal tab when you press **Save scanner settings**.
 
+**Top-down analysis before every order**
+Daily + 4H bias → 1H location (buy only in discount, sell only in premium) → 15m pullback done →
+5m/1m zone entry → stop beyond the 15m pullback swing and no 1H/4H level before TP1.
+All steps ✓ = *BUY/SELL now*. Bias + location ✓ but no entry yet = *limit order* at a 15m zone.
+Bias unclear or price in the wrong half of the 1H range = *no trade*. The page shows the ✓/✗ checklist.
+
+**Gold notifications**
+- New Gold setup (market or limit) that passed the top-down.
+- Filled ✅ · +1R → move SL to breakeven 🔒 · TP1 hit 🎯 · stopped ❌ · cancel pending order ⌛
+- **HOLD ✅ / CAUTION ⚠️ / WITHDRAW ❌** every 15 min while you're in a trade, and an instant
+  WITHDRAW alert if the 15m structure, 1H trend or bias turns against you.
+- Gold bias change 🧭, a morning "scanner online" ☀️, and a Gold status every hour 🟡.
+- Trade you opened yourself? Enter it under **I'm in a trade** on the Signal tab — you get the same
+  HOLD / WITHDRAW alerts for it.
+
 **Valid entries only**
 - *BUY/SELL now* appears only when price is reacting at a zone (order block, FVG, Fibonacci 50–61.8%,
   support/resistance, retest, liquidity sweep, pin bar/engulfing at a level). Never on a breakout candle
@@ -113,6 +128,15 @@ lot (0.01) would risk much more than your risk %.
 - Codes for Platinum, Palladium, indices, energy, copper and bonds weren't confirmed. If one shows an
   error after upgrading, send the message to Claude.
 - Scanner settings reset to the defaults if Render restarts the app (e.g. after you upload new files). Just re-save them.
+
+## Not getting notifications?
+
+Open the **Scanner** tab → **Why am I not getting alerts?** lists exactly what's missing. Usually one of:
+1. `TWELVE_DATA_API_KEY` not set → the badge says DEMO and nothing is sent.
+2. `NTFY_TOPIC` not set, or the ntfy app is subscribed to a different name (must match exactly).
+3. The cron-job.org link isn't running → Status says "Waiting…". Check the URL ends with `/api/scan?key=YOUR_PASSWORD`.
+4. Outside 08:00–21:00 Lagos time or at the weekend → no scans, that's normal.
+Tap **Send test notification** — if your phone buzzes, alerts work; the hourly Gold status confirms it all day.
 
 ## If something goes wrong
 
