@@ -16,13 +16,13 @@ Already have the site on Render? Do **Step 2** (replace the files), then **Steps
 
 ## Step 2 — Put the files on GitHub
 
-1. Unzip `signal-site.zip`. You'll see 16 files:
-   `app.py`, `signal_engine.py`, `topdown.py`, `manage.py`, `limit_orders.py`, `entry_rules.py`, `setups.py`, `markets.py`, `scanner.py`, `notify.py`, `data.py`,
+1. Unzip `signal-site.zip`. You'll see 19 files:
+   `app.py`, `signal_engine.py`, `topdown.py`, `manage.py`, `store.py`, `journal.py`, `lightweight-charts.js`, `limit_orders.py`, `entry_rules.py`, `setups.py`, `markets.py`, `scanner.py`, `notify.py`, `data.py`,
    `index.html`, `requirements.txt`, `Procfile`, `runtime.txt`, `DEPLOY.md`
 2. **New site:** github.com → **+** → **New repository** → name `signal-engine` → **Private** → **Create**
    → click **"uploading an existing file"**.
    **Updating:** open your `signal-engine` repo → **Add file** → **Upload files**.
-3. Drag in **all 16 files** → **Commit changes**. (Same names replace the old ones.)
+3. Drag in **all 19 files** → **Commit changes**. (Same names replace the old ones.)
 
 ---
 
@@ -49,6 +49,7 @@ Already have the site on Render? Do **Step 2** (replace the files), then **Steps
 | `TWELVE_DATA_API_KEY` | key from Step 1 | yes |
 | `APP_PASSWORD` | any password, letters and numbers only | yes (also protects the scan link) |
 | `NTFY_TOPIC` | a long secret name, e.g. `hameed-gold-7f3k9q2x` | yes, for phone alerts |
+| `DATABASE_URL` | Neon connection string (Step 7) | recommended — keeps your journal and settings forever |
 | `DATA_PLAN` | `free` (default), `grow` or `pro` | only after you pay Twelve Data |
 | `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` | from @BotFather | optional, instead of / as well as ntfy |
 
@@ -80,6 +81,18 @@ Within 2 minutes the **Scanner** tab shows **Status: Running**.
 
 ---
 
+## Step 7 — Keep your results permanently (free Neon database, optional but recommended)
+
+Without this, the Journal and your scanner settings reset every time you upload new files to GitHub.
+
+1. Go to **neon.com** → **Sign up** (free, no card) → create a project (any name, region close to you, e.g. Europe).
+2. On the project dashboard click **Connect** → copy the connection string
+   (starts with `postgresql://` and ends with `?sslmode=require`).
+3. Render → your service → **Environment** → add `DATABASE_URL` = that string → **Save Changes**.
+4. Open the **Journal** tab — the note under the curve should say *Saved permanently in your database*.
+
+---
+
 ## Using it
 
 **Signal tab** — pick a category (Metals, Forex, Indices, Energy, Crypto, Commodities, Bonds), a market and a
@@ -92,6 +105,13 @@ timeframe, tap **Get signal**. You get BUY/SELL now with a grade, or a limit ord
 - **Alert from:** the lowest grade that buzzes your phone. Default: Gold **A and up**, others **A+ only**.
 - Hours: 08:00–21:00 Lagos time, Monday–Friday. Crypto is scanned every day.
 - The scanner uses the balance and risk from the Signal tab when you press **Save scanner settings**.
+
+**Trade tab** — chart of the market with your entry, SL, TP and the 1H range drawn on it; switch D / 4H / 1H / 15m / 5m.
+**How many trades:** *Strict* (fewest, safest) · *Balanced* (recommended) · *Active* (most signals, more stop-outs).
+The choice is used by the scanner too.
+
+**Journal tab** — every setup the site gave and how it ended: win rate, total R, profit in $, equity curve,
+results per market. At 1:2 you break even at a 33% win rate. Give it a few weeks before judging.
 
 **Top-down analysis before every order**
 Daily + 4H bias → 1H location (buy only in discount, sell only in premium) → 15m pullback done →

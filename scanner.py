@@ -23,11 +23,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import data
+import journal
 import manage
 import markets as mk
 import notify
 import setups
 import signal_engine as se
+import store
 import topdown as td
 
 STATE_FILE = Path(os.getenv("DATA_DIR", Path(__file__).with_name("data"))) / "scanner.json"
@@ -42,7 +44,8 @@ DEFAULTS = dict(
     gold_limit_alerts=True, limit_alerts=False,
     gold_updates=True,                       # HOLD/WITHDRAW every 15 min while a Gold trade is open
     gold_bias_alerts=True, morning_hello=True,
-    gold_hourly=True,                        # a Gold status message every hour (shows alerts are working)
+    gold_hourly=True,
+    mode="balanced",                         # strict | balanced | active  (how many trades)                        # a Gold status message every hour (shows alerts are working)
     balance=100.0, risk=2.0, cent=False,
     start_hour=7, end_hour=20,               # UTC. 07-20 UTC = 08:00-21:00 Lagos (London + New York)
 )
@@ -55,20 +58,30 @@ state = dict(settings=dict(DEFAULTS), last_bucket={}, latest={}, alerts=[], last
 
 # ---------------------------------------------------------------- persistence
 def load():
-    try:
-        saved = json.loads(STATE_FILE.read_text())
-        state["settings"].update({k: v for k, v in saved.get("settings", {}).items() if k in DEFAULTS})
-        state["alerts"] = saved.get("alerts", [])[:30]
-    except Exception:
-        pass
+    saved = store.get("scanner", {}) or {}
+    state["settings"].update({k: v for k, v in saved.get("settings", {}).items() if k in DEFAULTS})
+    state["alerts"] = saved.get("alerts", [])[:30]
+    state["gold_bias"] = saved.get("gold_bias")
+    setups.load(store.get("setups"))
 
 
 def save():
-    try:
-        STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-        STATE_FILE.write_text(json.dumps(dict(settings=state["settings"], alerts=state["alerts"][:30])))
-    except Exception:
-        pass
+    store.put("scanner", dict(settings=state["settings"], alerts=state["alerts"][:30], gold_bias=state["gold_bias"]))
+
+
+_setups_fp = None
+
+
+def save_setups():
+    """Save locked setups only when something changed (keeps a free database asleep most of the time)."""
+    global _setups_fp
+    d = setups.dump()
+    fp = json.dumps([[k, v["id"], [o["status"] for o in v["orders"]]] for k, v in sorted(d["active"].items())]
+                    + [[k, v["id"], [o["status"] for o in v["orders"]]] for k, v in sorted(d["manual"].items())]
+                    + [h["id"] for h in d["history"][:3]], default=str)
+    if fp != _setups_fp:
+        _setups_fp = fp
+        store.put("setups", d)
 
 
 def update_settings(new: dict):
@@ -82,6 +95,8 @@ def update_settings(new: dict):
         if k in ("gold_tf", "other_tf") and v not in TF_OPTIONS:
             continue
         if k in ("gold_grade", "other_grade") and v not in GRADES:
+            continue
+        if k == "mode" and v not in td.MODES:
             continue
         if k in ("balance", "risk"):
             v = float(v)
@@ -152,13 +167,16 @@ def stale_count(symbol, tf):
     return n
 
 
-def analyze(symbol, tf, frames, balance, risk, cent=False):
+def analyze(symbol, tf, frames, balance, risk, cent=False, mode=None):
     """Top-down analysis -> grade -> locked setup (fixed until it finishes)."""
-    r = td.analyze(symbol, tf, frames, balance, risk, cent)
+    r = td.analyze(symbol, tf, frames, balance, risk, cent, mode or state["settings"].get("mode", "balanced"))
     add_grade(r, balance, risk)
     r["setup"] = setups.sync(symbol, tf, r, frames[tf])
     r["previous_setup"] = setups.last_finished(symbol, tf)
     r["my_trade"] = setups.update_manual(symbol, frames[tf])
+    m = mode or state["settings"].get("mode", "balanced")
+    for s_ in (r["previous_setup"], r["setup"], r["my_trade"]):
+        journal.record(s_, m)                                           # results journal
     return r
 
 
@@ -379,6 +397,8 @@ def run(now_ts=None):
             alerts += [a["title"] for a in handle_alerts(r, s)]
         state["last_scan"] = int(now_ts)
         state["last_scan_note"] = " ".join(dict.fromkeys(notes))
+        if checked:
+            save_setups()
         return dict(ok=True, checked=checked, alerts=alerts, note=state["last_scan_note"])
     finally:
         _lock.release()
@@ -420,6 +440,8 @@ def problems():
         p.append("Last notification failed: " + state["notify_errors"][0])
     if state["last_error"]:
         p.append("Last data error: " + state["last_error"])
+    if store.last_error:
+        p.append("Saving failed: " + store.last_error)
     return p
 
 
@@ -428,6 +450,7 @@ def status():
                 live=data.live(), channels=notify.channels(), last_scan=state["last_scan"],
                 note=state["last_scan_note"], latest=state["latest"], alerts=state["alerts"][:20],
                 notify_errors=state["notify_errors"], plan=mk.plan(), problems=problems(),
+                storage=store.backend(), modes=list(td.MODES),
                 gold_bias=state["gold_bias"],
                 stacks={k: td.frames_needed(k) for k in td.STACKS}, refresh=td.REFRESH,
                 tf_minutes={k: se.TF_MINUTES[k] for k in ("1min", "5min", "15min", "1h", "4h", "1day")})

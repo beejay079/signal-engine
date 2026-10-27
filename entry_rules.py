@@ -32,7 +32,7 @@ TRADE_KEYS = ("entry", "stop_loss", "take_profit_1", "take_profit_2", "rr_tp1", 
               "sl_distance", "lot_size", "risk_amount")
 
 
-def validate(result, symbol, interval, df, balance, risk, cent=False):
+def validate(result, symbol, interval, df, balance, risk, cent=False, max_ext=None):
     if result.get("signal") not in ("BUY", "SELL"):
         return result
     d = 1 if result["signal"] == "BUY" else -1
@@ -49,7 +49,8 @@ def validate(result, symbol, interval, df, balance, risk, cent=False):
         why.append(f"Breakout/indicator trigger only ({', '.join(result.get('triggers', []))}) - "
                    "no valid zone. Wait for the pullback to a zone.")
     ext = (price - c.ema20[i]) * d / a
-    if ext > MAX_EXTENSION_ATR:
+    max_ext = max_ext or MAX_EXTENSION_ATR
+    if ext > max_ext:
         why.append(f"Chasing: price is {ext:.1f} ATR past the 20 EMA. Wait for the pullback.")
     drift = (price - c.c[i]) * d / a
     if drift > MAX_DRIFT_ATR:

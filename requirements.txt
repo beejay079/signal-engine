@@ -2,3 +2,4 @@ fastapi>=0.110
 uvicorn>=0.29
 pandas>=2.2
 numpy>=1.26
+psycopg[binary]>=3.1

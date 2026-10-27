@@ -29,7 +29,7 @@ def key(symbol, tf):
 def _order(kind, side, src, expires_min, now):
     return dict(kind=kind, side=side, entry=src["entry"], stop_loss=src["stop_loss"],
                 take_profit_1=src["take_profit_1"], take_profit_2=src["take_profit_2"],
-                rr_tp2=src.get("rr_tp2"), lot_size=src["lot_size"], risk_amount=src["risk_amount"],
+                rr_tp1=src.get("rr_tp1", "1:2"), rr_tp2=src.get("rr_tp2"), lot_size=src["lot_size"], risk_amount=src["risk_amount"],
                 zone=src.get("entry_zone") or src.get("zone", ""), sl_reason=src.get("sl_reason", ""),
                 lot_note=src.get("lot_note", ""),
                 status="IN TRADE" if kind == "market" else "WAITING",
@@ -140,6 +140,21 @@ def clear(symbol, tf):
             s["live"] = False
             history.insert(0, s)
         return bool(s)
+
+
+# ---------------------------------------------------------------- save / restore
+def dump():
+    with _lock:
+        return dict(active=active, history=history[:20], manual=manual)
+
+
+def load(saved):
+    if not saved:
+        return
+    with _lock:
+        active.update(saved.get("active", {}))
+        history[:] = saved.get("history", [])
+        manual.update(saved.get("manual", {}))
 
 
 # ---------------------------------------------------------------- your own trades

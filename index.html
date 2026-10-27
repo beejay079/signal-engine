@@ -24,9 +24,9 @@
   html, body { margin: 0; background: var(--bg); color: var(--text);
     font-family: Inter, system-ui, -apple-system, sans-serif; }
   body { padding: max(16px, env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom)); }
-  .wrap { max-width: 520px; margin: 0 auto; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
 
-  header { display: flex; align-items: center; justify-content: space-between; margin: 4px 0 18px; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 16px; flex-wrap: wrap; }
   h1 { font-size: 20px; font-weight: 800; letter-spacing: -.02em; margin: 0; }
   h1 span { color: var(--accent); }
   .badge { font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 99px;
@@ -62,7 +62,7 @@
   .go:disabled { opacity: .55; }
   .hint { text-align: center; color: var(--faint); font-size: 12px; margin: 10px 0 0; min-height: 16px; }
 
-  .card { margin-top: 18px; border-radius: 16px; border: 1px solid var(--line); background: var(--panel);
+  .card { margin-top: 0; border-radius: 16px; border: 1px solid var(--line); background: var(--panel);
     overflow: hidden; }
   .hero { padding: 18px 18px 16px; }
   .hero.buy { background: var(--buy-bg); } .hero.sell { background: var(--sell-bg); }
@@ -110,7 +110,7 @@
   .vote i.b { color: var(--buy); } .vote i.s { color: var(--sell); }
   .vote div small { display: block; color: var(--faint); }
 
-  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: var(--panel); border: 1px solid var(--line);
+  .tabs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; max-width: 520px; background: var(--panel); border: 1px solid var(--line);
     border-radius: 12px; padding: 4px; margin-bottom: 18px; }
   .tabs button { border: 0; background: transparent; color: var(--muted); border-radius: 9px; padding: 10px 0;
     font: 700 14px Inter, sans-serif; cursor: pointer; position: relative; }
@@ -181,65 +181,125 @@
   .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(6,17,31,.3);
     border-top-color: #06111f; border-radius: 50%; animation: s .7s linear infinite; vertical-align: -2px; margin-right: 8px; }
   @keyframes s { to { transform: rotate(360deg); } }
+
+  /* ---------- dashboard layout ---------- */
+  .ticker { display: flex; align-items: center; gap: 10px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 99px; padding: 6px 14px 6px 12px; font-size: 13px; cursor: pointer; order: 3; width: 100%; justify-content: space-between; }
+  .ticker .tk-name { color: #f2b544; font-weight: 700; }
+  .ticker b { font: 700 15px var(--mono); }
+  .pill2 { font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 99px; background: var(--panel-2); color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .pill2.bull { background: var(--buy-bg); color: var(--buy); } .pill2.bear { background: var(--sell-bg); color: var(--sell); }
+  .tk-td { font: 600 11px var(--mono); color: var(--muted); }
+  .layout { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "controls" "chart" "result" "mytrade"; }
+  .a-controls { grid-area: controls; margin: 0; } .a-chart { grid-area: chart; }
+  .a-result { grid-area: result; min-width: 0; } .a-mytrade { grid-area: mytrade; margin: 0; }
+  .chartcard { padding: 0; }
+  .chead { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 14px 8px; flex-wrap: wrap; }
+  .chead b { font-size: 15px; } .chead .muted { margin: 0; }
+  .tfs { display: flex; gap: 4px; }
+  .tfs button { border: 1px solid var(--line); background: transparent; color: var(--muted); border-radius: 8px;
+    padding: 5px 9px; font: 700 12px Inter, sans-serif; cursor: pointer; }
+  .tfs button.on { background: var(--panel-2); color: var(--text); border-color: var(--accent); }
+  #chart { height: 340px; width: 100%; }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; padding: 8px 14px 12px; font-size: 11px; color: var(--muted); border-top: 1px solid var(--line); }
+  .legend i { display: inline-block; width: 14px; height: 0; border-top: 2px solid; margin-right: 5px; vertical-align: middle; }
+  .legend i.d { border-top-style: dashed; } .legend i.o { border-top-style: dotted; }
+  .chart-empty { height: 340px; display: grid; place-items: center; color: var(--faint); font-size: 13px; }
+  .mode-hint { font-size: 12px; color: var(--faint); margin: 6px 0 14px; min-height: 16px; }
+  .scgrid, .jgrid { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
+  .tile { background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  .tile .k { font-size: 10px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+  .tile .v { font: 700 20px var(--mono); margin-top: 2px; } .tile .x { font-size: 11px; color: var(--faint); }
+  #jrCurve { height: 200px; }
+  .jrow { display: grid; grid-template-columns: 1.3fr .9fr .8fr .6fr; gap: 6px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13px; align-items: center; }
+  .jrow:first-child { border-top: 0; } .jrow small { display: block; color: var(--faint); font-size: 11px; }
+  .seg.small button { padding: 6px 10px; font-size: 12px; white-space: nowrap; }
+  @media (min-width: 1000px) {
+    body { padding-left: 24px; padding-right: 24px; }
+    .ticker { order: 0; width: auto; }
+    .layout { grid-template-columns: minmax(0, 1fr) 360px;
+      grid-template-areas: "chart controls" "result mytrade"; align-items: start; }
+    #chart, .chart-empty { height: 420px; }
+    .scgrid, .jgrid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+    .tiles { grid-template-columns: repeat(6, 1fr); }
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header>
+  <header class="topbar">
     <h1>Signal<span>Engine</span></h1>
+    <div class="ticker" id="ticker" title="Open Gold">
+      <span class="tk-name">★ Gold</span><b id="tkPrice">—</b>
+      <span class="pill2" id="tkBias">bias —</span><span class="tk-td" id="tkTd"></span>
+    </div>
     <span id="mode" class="badge">29 strategies</span>
   </header>
 
-  <div class="tabs"><button data-t="signal" class="on">Signal</button><button data-t="scanner">Scanner<span class="dot hidden" id="scanDot"></span></button></div>
+  <nav class="tabs"><button data-t="signal" class="on">Trade</button><button data-t="scanner">Scanner<span class="dot hidden" id="scanDot"></span></button><button data-t="journal">Journal</button></nav>
 
-  <section id="tab-signal">
-  <p class="label">Market</p>
-  <div class="cats" id="cats"></div>
-  <div class="mkts" id="mkts"></div>
+  <section id="tab-signal" class="layout">
+    <div class="panel a-controls">
+      <p class="label">Market</p>
+      <div class="cats" id="cats"></div>
+      <div class="mkts" id="mkts"></div>
+      <div class="row">
+        <div>
+          <p class="label">Entry timeframe</p>
+          <div class="seg" id="tf">
+            <button data-v="1min">1m</button><button data-v="5min">5m</button><button data-v="15min">15m</button><button data-v="1h">1h</button>
+          </div>
+        </div>
+        <div>
+          <p class="label">Risk per trade</p>
+          <div class="field"><input id="risk" inputmode="decimal" value="2"><span>%</span></div>
+        </div>
+      </div>
+      <p class="label">How many trades</p>
+      <div class="seg" id="modeSeg"><button data-v="strict">Strict</button><button data-v="balanced">Balanced</button><button data-v="active">Active</button></div>
+      <p class="mode-hint" id="modeHint"></p>
+      <p class="label">Balance (USD)</p>
+      <div class="field" style="margin-bottom:12px"><span>$</span><input id="balance" inputmode="decimal" value="100"></div>
+      <div class="toggles">
+        <label><input type="checkbox" id="cent"> Cent account</label>
+        <label><input type="checkbox" id="watch"> Auto-refresh 30s</label>
+      </div>
+      <button class="go" id="go">Get signal</button>
+      <p class="hint" id="hint"></p>
+    </div>
 
-  <div class="row">
-    <div>
-      <p class="label">Timeframe</p>
-      <div class="seg" id="tf">
-        <button data-v="1min">1m</button><button data-v="5min">5m</button><button data-v="15min">15m</button><button data-v="1h">1h</button>
+    <div class="card chartcard a-chart">
+      <div class="chead"><div><b id="chTitle">Chart</b> <span class="muted" id="chSub"></span></div><div class="tfs" id="chartTfs"></div></div>
+      <div id="chart"><div class="chart-empty">Tap <b>&nbsp;Get signal&nbsp;</b> to load the chart</div></div>
+      <div class="legend">
+        <span><i style="border-color:var(--accent)"></i>Entry</span><span><i style="border-color:var(--sell)"></i>Stop loss</span>
+        <span><i style="border-color:var(--buy)"></i>Take profit</span><span><i class="o" style="border-color:var(--faint)"></i>1H range high / low</span>
+        <span><i class="d" style="border-color:var(--wait)"></i>Discount / premium limit</span>
       </div>
     </div>
-    <div>
-      <p class="label">Risk per trade</p>
-      <div class="field"><input id="risk" inputmode="decimal" value="2"><span>%</span></div>
+
+    <div class="a-result" id="out"></div>
+
+    <div class="panel a-mytrade">
+      <h2>I'm in a trade <span class="muted" style="font-size:12px;font-weight:500">get HOLD / WITHDRAW alerts</span></h2>
+      <div class="seg" id="mtSide"><button data-v="BUY" class="on">BUY</button><button data-v="SELL">SELL</button></div>
+      <div class="form4">
+        <input id="mtEntry" inputmode="decimal" placeholder="Entry price">
+        <input id="mtSL" inputmode="decimal" placeholder="Stop loss">
+        <input id="mtTP" inputmode="decimal" placeholder="Take profit (optional)">
+        <input id="mtLot" inputmode="decimal" placeholder="Lot (optional)">
+      </div>
+      <button class="btn2" id="mtAdd">Watch this trade on <span id="mtSym">Gold</span></button>
+      <p class="hint" id="mtHint"></p>
+      <div id="mtList"></div>
     </div>
-  </div>
-
-  <p class="label">Balance (USD)</p>
-  <div class="field" style="margin-bottom:12px"><span>$</span><input id="balance" inputmode="decimal" value="100"></div>
-
-  <div class="toggles">
-    <label><input type="checkbox" id="cent"> Cent account</label>
-    <label><input type="checkbox" id="watch"> Watch (check every 30s)</label>
-  </div>
-
-  <button class="go" id="go">Get signal</button>
-  <p class="hint" id="hint"></p>
-
-  <div id="out"></div>
-
-  <div class="panel" style="margin-top:18px">
-    <h2>I'm in a trade <span class="muted" style="font-size:12px;font-weight:500">get HOLD / WITHDRAW alerts</span></h2>
-    <div class="seg" id="mtSide"><button data-v="BUY" class="on">BUY</button><button data-v="SELL">SELL</button></div>
-    <div class="form4">
-      <input id="mtEntry" inputmode="decimal" placeholder="Entry price">
-      <input id="mtSL" inputmode="decimal" placeholder="Stop loss">
-      <input id="mtTP" inputmode="decimal" placeholder="Take profit (optional)">
-      <input id="mtLot" inputmode="decimal" placeholder="Lot (optional)">
-    </div>
-    <button class="btn2" id="mtAdd">Watch this trade on <span id="mtSym">Gold</span></button>
-    <p class="hint" id="mtHint"></p>
-    <div id="mtList"></div>
-  </div>
   </section>
 
   <section id="tab-scanner" class="hidden">
-    <div class="panel">
+   <div class="scgrid"><div>
+<div class="panel">
       <h2>Auto-scanner <label class="switch"><input type="checkbox" id="scEnabled"><span></span></label></h2>
       <div class="stat">Status <b id="scStatus">–</b></div>
       <div class="stat">Last scan <b id="scLast">–</b></div>
@@ -259,7 +319,8 @@
       <div class="feed" id="scAlerts"><div class="muted">No alerts yet.</div></div>
     </div>
 
-    <div class="panel">
+       </div><div>
+<div class="panel">
       <h2>Latest check per market</h2>
       <div id="scLatest"><div class="muted">Nothing scanned yet.</div></div>
     </div>
@@ -287,14 +348,34 @@
       <button class="go" id="scSave" style="margin-top:14px">Save scanner settings</button>
       <p class="hint" id="scSaved"></p>
     </div>
-    <p class="foot">Every check is a full top-down analysis (Daily/4H bias → 1H location → 15m pullback → 5m entry).
+       </div></div>
+<p class="foot">Every check is a full top-down analysis (Daily/4H bias → 1H location → 15m pullback → 5m entry).
     Grades: A+ ≥ 85 · A ≥ 75 · B ≥ 65 — from strategy agreement, entry triggers, higher-timeframe trend and regime. Scans 08:00–21:00 Lagos time, Mon–Fri (crypto every day).</p>
+    </section>
+
+  <section id="tab-journal" class="hidden">
+    <div class="panel">
+      <h2>Results <div class="seg small" id="jrDays"><button data-v="7">7 days</button><button data-v="30">30 days</button><button data-v="0" class="on">All</button></div></h2>
+      <select id="jrSym"><option value="">All markets</option></select>
+      <div class="tiles" id="jrTiles"></div>
+      <p class="label">Equity curve (R = times your risk)</p>
+      <div id="jrCurve"><div class="chart-empty" style="height:200px">No finished trades yet</div></div>
+      <p class="muted" id="jrNote"></p>
+    </div>
+    <div class="jgrid">
+      <div class="panel"><h2>By market</h2><div id="jrBySym"><div class="muted">—</div></div>
+        <h2 style="margin-top:16px">Setups not taken</h2><div id="jrNot"><div class="muted">—</div></div></div>
+      <div class="panel"><h2>Trades</h2><div id="jrList"><div class="muted">No trades yet.</div></div>
+        <button class="btn2" id="jrReset">Reset journal</button></div>
+    </div>
+    <p class="foot">Win = TP1 hit (+2R or more). Loss = stopped out (−1R). Limits that expired or were missed are not counted.
+    At 1:2 you break even with a 33% win rate — anything above that is profit.</p>
   </section>
 
-  <p class="foot">Higher-timeframe filter: 1m→15m · 5m→1h · 15m→4h · 1h→4h<br>
-  Not financial advice. Check the price in MT5 and the news calendar before entering.</p>
+  <p class="foot">Not financial advice. Check the price in MT5 and the news calendar before entering.</p>
 </div>
 
+<script src="/lightweight-charts.js"></script>
 <script>
 let MARKETS = [], CATS = [], BY = {};
 const $ = s => document.querySelector(s);
@@ -306,6 +387,7 @@ let state = {
   cat: store.get("cat", "Metals"),
   symbol: store.get("symbol", "XAU/USD"), tf: store.get("tf", "1min"),
   balance: store.get("balance", 100), risk: store.get("risk", 2), cent: store.get("cent", false),
+  mode: store.get("mode", "balanced"),
 };
 let password = store.get("pw", "");
 let watchTimer = null, lastSignal = null, busy = false;
@@ -354,6 +436,8 @@ function paint() {
   paintMarkets(); if (typeof paintMtSym === "function") paintMtSym();
   document.querySelectorAll("#mkts .mk").forEach(b => b.classList.toggle("on", b.dataset.v === state.symbol));
   document.querySelectorAll("#tf button").forEach(b => b.classList.toggle("on", b.dataset.v === state.tf));
+  document.querySelectorAll("#modeSeg button").forEach(b => b.classList.toggle("on", b.dataset.v === state.mode));
+  $("#modeHint").textContent = MODE_HINT[state.mode] || "";
   $("#balance").value = state.balance; $("#risk").value = state.risk; $("#cent").checked = state.cent;
 }
 $("#tf").onclick = e => { const b = e.target.closest("button"); if (!b) return;
@@ -362,12 +446,23 @@ $("#balance").onchange = e => { state.balance = parseFloat(e.target.value) || 10
 $("#risk").onchange = e => { state.risk = parseFloat(e.target.value) || 2; store.set("risk", state.risk); };
 $("#cent").onchange = e => { state.cent = e.target.checked; store.set("cent", state.cent); };
 $("#go").onclick = () => getSignal();
+const MODE_HINT = {
+  strict: "Fewest trades. Buys only in the lower 60% of the 1H range, no chasing.",
+  balanced: "Recommended. Lower 70% of the 1H range, plus deeper limit orders at 1H zones.",
+  active: "Most trades. Lower 80% of the 1H range — more signals, more stop-outs.",
+};
+$("#modeSeg").onclick = async e => { const b = e.target.closest("button"); if (!b) return;
+  state.mode = b.dataset.v; store.set("mode", state.mode); paint();
+  try { await api("/api/scanner/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: state.mode }) }); } catch {}
+  getSignal(); };
+$("#ticker").onclick = () => { state.cat = "Metals"; state.symbol = "XAU/USD"; store.set("cat", state.cat); store.set("symbol", state.symbol);
+  document.querySelector(".tabs button[data-t='signal']").click(); paint(); getSignal(); };
 $("#watch").onchange = e => {
   clearInterval(watchTimer);
   if (e.target.checked) { getSignal(); watchTimer = setInterval(() => getSignal(true), 30000); }
   $("#hint").textContent = e.target.checked ? "Watching… you'll get a beep when a trade appears." : "";
 };
-loadMarkets().then(() => { loadTrades(); setInterval(() => document.visibilityState === "visible" && loadTrades(), 60000); });
+loadMarkets().then(() => { loadTrades(); refreshScanner(); setInterval(() => document.visibilityState === "visible" && loadTrades(), 60000); });
 
 // ---------- fetch ----------
 async function getSignal(silent = false) {
@@ -376,12 +471,14 @@ async function getSignal(silent = false) {
   const btn = $("#go");
   if (!silent) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Reading the market…'; }
   const q = new URLSearchParams({ symbol: state.symbol, tf: state.tf, balance: state.balance,
-                                  risk: state.risk, cent: state.cent });
+                                  risk: state.risk, cent: state.cent, mode: state.mode });
   try {
     const res = await api("/api/signal?" + q);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || data.detail || "Something went wrong");
     render(data);
+    drawChart(data);
+    if (data.symbol === "XAU/USD") setTicker(data.price, (data.topdown || {}).bias, data.topdown);
     if (data.setup && data.setup.new && lastSignal !== data.setup.id) alertTrade();
     lastSignal = data.setup ? data.setup.id : null;
   } catch (err) {
@@ -528,7 +625,9 @@ document.querySelector(".tabs").onclick = e => { const b = e.target.closest("but
   document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
   $("#tab-signal").classList.toggle("hidden", b.dataset.t !== "signal");
   $("#tab-scanner").classList.toggle("hidden", b.dataset.t !== "scanner");
+  $("#tab-journal").classList.toggle("hidden", b.dataset.t !== "journal");
   if (b.dataset.t === "scanner") loadScanner();
+  if (b.dataset.t === "journal") loadJournal();
 };
 
 // ---------- scanner ----------
@@ -547,6 +646,9 @@ async function refreshScanner(fillForm = false) {
     if (!res.ok) throw new Error(SC.detail || "Error");
   } catch (e) { $("#scStatus").textContent = e.message; return; }
   const st = SC.settings, cr = SC.credits;
+  if (st.mode && st.mode !== state.mode) { state.mode = st.mode; store.set("mode", state.mode); paint(); }
+  const g = SC.latest["XAU/USD"];
+  if (g && g.price) setTicker(g.price, g.bias, null, g.checklist);
   $("#scEnabled").checked = st.enabled;
   const fresh = SC.last_scan && Date.now() / 1000 - SC.last_scan < 180;
   $("#scStatus").innerHTML = !st.enabled ? '<span class="bad">Off</span>'
@@ -662,6 +764,146 @@ function alertTrade() {
       o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + .16); });
   } catch {}
 }
+
+// ---------- Gold ticker ----------
+function setTicker(price, bias, td, checklist) {
+  $("#tkPrice").textContent = price;
+  const b = String(bias || "").toLowerCase();
+  const el = $("#tkBias"); el.textContent = b ? b : "bias —";
+  el.className = "pill2" + (b === "bullish" ? " bull" : b === "bearish" ? " bear" : "");
+  $("#tkTd").textContent = td ? `${td.passed}/${td.total} ✓` : checklist ? (checklist.match(/✓/g) || []).length + "/" + (checklist.split("·").length) + " ✓" : "";
+}
+
+// ---------- chart ----------
+const LOCALE = (() => { try { const l = navigator.language || "en-US"; new Intl.NumberFormat(l); return l; } catch { return "en-US"; } })();
+const TF_ORDER = ["1day", "4h", "1h", "15min", "5min", "1min"];
+const TF_LABEL = { "1day": "D", "4h": "4H", "1h": "1H", "15min": "15m", "5min": "5m", "1min": "1m" };
+let CH = null, CS = null, chartLines = [], chartTf = store.get("chartTf", null), lastR = null;
+const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function digitsFor(p) { return p < 10 ? 5 : p < 200 ? 3 : 2; }
+function drawChart(r) {
+  lastR = r;
+  if (!r.chart) return;
+  if (!window.LightweightCharts) { $("#chart").innerHTML = '<div class="chart-empty">Chart library could not load.</div>'; return; }
+  const tfs = TF_ORDER.filter(t => r.chart[t]);
+  if (!tfs.includes(chartTf)) chartTf = r.interval;
+  $("#chartTfs").innerHTML = tfs.map(t => `<button data-v="${t}" class="${t === chartTf ? "on" : ""}">${TF_LABEL[t]}</button>`).join("");
+  $("#chTitle").textContent = `${r.name || r.symbol} · ${TF_LABEL[chartTf]}`;
+  $("#chSub").textContent = r.price;
+  if (!CH) {
+    $("#chart").innerHTML = "";
+    CH = LightweightCharts.createChart($("#chart"), {
+      autoSize: true,
+      layout: { background: { color: "transparent" }, textColor: cssv("--muted"), fontFamily: "Inter, sans-serif" },
+      grid: { vertLines: { color: "rgba(36,48,64,.5)" }, horzLines: { color: "rgba(36,48,64,.5)" } },
+      rightPriceScale: { borderColor: cssv("--line") },
+      timeScale: { borderColor: cssv("--line"), timeVisible: true, secondsVisible: false,
+        tickMarkFormatter: (t, type) => { const d = new Date(t * 1000);
+          return type < 3 ? d.toLocaleDateString([], { day: "numeric", month: "short" }) : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); } },
+      localization: { locale: LOCALE, timeFormatter: t => new Date(t * 1000).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) },
+      crosshair: { mode: 0 },
+    });
+    CS = CH.addCandlestickSeries({ upColor: cssv("--buy"), downColor: cssv("--sell"), borderVisible: false,
+      wickUpColor: cssv("--buy"), wickDownColor: cssv("--sell") });
+  }
+  const dg = digitsFor(r.price);
+  CS.applyOptions({ priceFormat: { type: "price", precision: dg, minMove: Math.pow(10, -dg) } });
+  CS.setData(r.chart[chartTf].map(c => ({ time: c[0], open: c[1], high: c[2], low: c[3], close: c[4] })));
+  chartLines.forEach(l => CS.removePriceLine(l)); chartLines = [];
+  const LS = LightweightCharts.LineStyle;
+  const line = (price, color, title, style = LS.Solid, width = 2) => price != null && chartLines.push(
+    CS.createPriceLine({ price: Number(price), color, lineWidth: width, lineStyle: style, axisLabelVisible: true, title }));
+  const S = r.setup;
+  const orders = S ? S.orders.filter(o => ["WAITING", "FILLED", "IN TRADE"].includes(o.status)) : (r.limit_orders || []);
+  orders.forEach(o => {
+    const side = (o.side || "").split(" ")[0];
+    line(o.entry, cssv("--accent"), `${side} ${o.kind === "limit" || /LIMIT/.test(o.side) ? "limit" : "entry"}`);
+    line(o.stop_loss, cssv("--sell"), "SL");
+    line(o.take_profit_1, cssv("--buy"), "TP1");
+    line(o.take_profit_2, cssv("--buy"), "TP2", LS.Dashed, 1);
+  });
+  const rg = (r.topdown || {}).range;
+  if (rg) {
+    line(rg.high, cssv("--faint"), `${rg.tf} high`, LS.Dotted, 1);
+    line(rg.low, cssv("--faint"), `${rg.tf} low`, LS.Dotted, 1);
+    const b = (r.topdown || {}).bias;
+    if (b === "Bullish" || b === "Bearish") line(rg.limit, cssv("--wait"), b === "Bullish" ? "buy below" : "sell above", LS.Dashed, 1);
+  }
+  const markers = [];
+  if (S) {
+    const data = r.chart[chartTf]; let t = data[0][0];
+    for (const c of data) { if (c[0] <= S.created) t = c[0]; }
+    const buy = S.orders[0].side.startsWith("BUY");
+    markers.push({ time: t, position: buy ? "belowBar" : "aboveBar", color: buy ? cssv("--buy") : cssv("--sell"),
+      shape: buy ? "arrowUp" : "arrowDown", text: S.orders[0].side });
+  }
+  CS.setMarkers(markers);
+  CH.timeScale().fitContent();
+}
+$("#chartTfs").onclick = e => { const b = e.target.closest("button"); if (!b || !lastR) return;
+  chartTf = b.dataset.v; store.set("chartTf", chartTf); drawChart(lastR); };
+
+// ---------- journal ----------
+let JR = null, jrDays = 0, JC = null, JS = null;
+$("#jrDays").onclick = e => { const b = e.target.closest("button"); if (!b) return; jrDays = +b.dataset.v;
+  document.querySelectorAll("#jrDays button").forEach(x => x.classList.toggle("on", x === b)); loadJournal(); };
+$("#jrSym").onchange = () => loadJournal();
+async function loadJournal() {
+  if ($("#jrSym").options.length === 1 && MARKETS.length)
+    $("#jrSym").innerHTML += MARKETS.filter(m => !m.locked).map(m => `<option value="${m.symbol}">${esc(m.name)}</option>`).join("");
+  try {
+    const q = new URLSearchParams({ symbol: $("#jrSym").value, days: jrDays });
+    JR = await (await api("/api/journal?" + q)).json();
+  } catch (e) { $("#jrNote").textContent = e.message; return; }
+  const s = JR.stats;
+  const tile = (k, v, x = "", cls = "") => `<div class="tile"><div class="k">${k}</div><div class="v ${cls}">${v}</div><div class="x">${x}</div></div>`;
+  $("#jrTiles").innerHTML =
+    tile("Trades", s.trades, `${s.wins} won · ${s.losses} lost`) +
+    tile("Win rate", s.win_rate == null ? "—" : s.win_rate + "%", "break-even 33%", s.win_rate == null ? "" : s.win_rate >= 34 ? "ok" : "bad") +
+    tile("Total", (s.total_r >= 0 ? "+" : "") + s.total_r + "R", "R = times your risk", s.total_r >= 0 ? "ok" : "bad") +
+    tile("Profit", (s.pnl >= 0 ? "+$" : "−$") + Math.abs(s.pnl).toFixed(2), "at the lot sizes given", s.pnl >= 0 ? "ok" : "bad") +
+    tile("Per trade", s.expectancy == null ? "—" : (s.expectancy >= 0 ? "+" : "") + s.expectancy + "R", "average") +
+    tile("Streak", s.streak || "—", "W = wins, L = losses");
+  $("#jrNote").textContent = s.storage === "file"
+    ? "Saved on the server until the next redeploy. Add DATABASE_URL on Render to keep results permanently (see DEPLOY.md)."
+    : "Saved permanently in your database.";
+  // equity curve
+  if (s.curve.length && window.LightweightCharts) {
+    if (!JC) { $("#jrCurve").innerHTML = "";
+      JC = LightweightCharts.createChart($("#jrCurve"), { autoSize: true,
+        layout: { background: { color: "transparent" }, textColor: cssv("--muted") },
+        grid: { vertLines: { visible: false }, horzLines: { color: "rgba(36,48,64,.5)" } },
+        localization: { locale: LOCALE },
+        rightPriceScale: { borderColor: cssv("--line") }, timeScale: { borderColor: cssv("--line"), timeVisible: true } });
+      JS = JC.addBaselineSeries({ baseValue: { type: "price", price: 0 }, topLineColor: cssv("--buy"), bottomLineColor: cssv("--sell"),
+        topFillColor1: "rgba(31,199,126,.25)", topFillColor2: "rgba(31,199,126,.02)",
+        bottomFillColor1: "rgba(255,84,104,.02)", bottomFillColor2: "rgba(255,84,104,.25)" }); }
+    let last = 0;
+    JS.setData(s.curve.map(p => { const t = Math.max(p.t, last + 1); last = t; return { time: t, value: p.r }; }));
+    JC.timeScale().fitContent();
+  } else if (!s.curve.length) { if (JC) { JC.remove(); JC = null; } $("#jrCurve").innerHTML = '<div class="chart-empty" style="height:200px">No finished trades yet</div>'; }
+  // by market
+  const bs = Object.entries(s.by_symbol);
+  $("#jrBySym").innerHTML = bs.length ? bs.map(([sym, b]) => `<div class="jrow"><div>${esc((BY[sym] || {}).name || sym)}</div>
+      <div>${b.trades} trades</div><div>${Math.round(100 * b.wins / b.trades)}% won</div>
+      <div class="${b.r >= 0 ? "ok" : "bad"}">${b.r >= 0 ? "+" : ""}${b.r}R</div></div>`).join("") : '<div class="muted">No finished trades yet.</div>';
+  const nt = Object.entries(s.not_taken);
+  $("#jrNot").innerHTML = nt.length ? nt.map(([k, n]) => `<div class="stat">${esc(k.toLowerCase())} <b>${n}</b></div>`).join("")
+    : '<div class="muted">None.</div>';
+  // trade list
+  const ST2 = { "TP1 HIT": "st-win", "STOPPED": "st-loss" };
+  $("#jrList").innerHTML = JR.trades.length ? JR.trades.slice(0, 60).map(t => `<div class="jrow">
+      <div><b>${esc((BY[t.symbol] || {}).name || t.symbol)}</b> ${esc(t.side)}<small>${t.tf === "manual" ? "your trade" : t.tf.replace("min", "m")} · ${t.kind}${t.grade ? " · " + t.grade : ""}</small></div>
+      <div>${t.entry}<small>SL ${t.stop_loss}</small></div>
+      <div><span class="st ${ST2[t.status] || "st-off"}">${esc(t.status.toLowerCase())}</span></div>
+      <div class="${t.r > 0 ? "ok" : t.r < 0 ? "bad" : "muted"}" style="text-align:right">${t.taken ? (t.r > 0 ? "+" : "") + t.r + "R" : "—"}
+        <small>${t.closed_at ? new Date(t.closed_at * 1000).toLocaleDateString([], { day: "numeric", month: "short" }) + " " + hhmm(t.closed_at) : ""}</small></div>
+    </div>`).join("") : '<div class="muted">No trades yet. Every setup the site gives is recorded here when it finishes.</div>';
+}
+$("#jrReset").onclick = async () => {
+  if (!confirm("Delete all journal results? This cannot be undone.")) return;
+  await api("/api/journal", { method: "DELETE" }); loadJournal();
+};
 </script>
 </body>
 </html>

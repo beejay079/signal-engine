@@ -31,6 +31,16 @@ REFRESH = {"1day": 240, "4h": 60, "1h": 30, "15min": 15, "5min": 5, "1min": 1}
 ROLE = {"bias": "Bias", "location": "Location", "setup": "Setup", "entry": "Entry"}
 LABEL = {"1day": "Daily", "4h": "4H", "1h": "1H", "15min": "15m", "5min": "5m", "1min": "1m"}
 DISCOUNT_MAX = 0.60       # buys only in the lower 60% of the 1H / 15m range (sells: upper 60%)
+# How strict the filter is. Strict = fewest trades, Active = most trades.
+#   loc / setup : how far into the 1H / 15m range price may be (0.6 = lower 60% for buys)
+#   ext         : max ATR past the 20 EMA for a market entry (chasing filter)
+#   deep        : offer a deeper limit at a 1H zone when price is not in discount yet
+MODES = {
+    "strict":   dict(loc=0.60, setup=0.60, ext=1.5, deep=False),
+    "balanced": dict(loc=0.70, setup=0.75, ext=2.0, deep=True),
+    "active":   dict(loc=0.80, setup=0.85, ext=2.5, deep=True),
+}
+DEEP_LIMIT_EXPIRY_MIN = 240
 SETUP_SWING_BARS = 4      # SL goes beyond the low/high of the last 4 setup-TF candles
 MAX_SL_SETUP_ATR = 1.5    # ... but never more than 1.5 ATR of the setup timeframe
 LIMIT_EXPIRY_SETUP_BARS = 8
@@ -70,11 +80,11 @@ def read(c, price):
     return dict(dir=d, trend=t, structure=s, pos=pos, last_break=brk, atr=c.atr_now)
 
 
-def _favourable(pos, d):
+def _favourable(pos, d, limit=DISCOUNT_MAX):
     """Discount for buys, premium for sells."""
     if pos is None:
         return True
-    return pos <= DISCOUNT_MAX if d == 1 else pos >= 1 - DISCOUNT_MAX
+    return pos <= limit if d == 1 else pos >= 1 - limit
 
 
 def _levels_against(ctxs, d, price, min_gap):
@@ -87,8 +97,9 @@ def _levels_against(ctxs, d, price, min_gap):
     return [x for x in out if x and (x - price) * d > min_gap]
 
 
-def analyze(symbol, entry_tf, frames, balance, risk, cent=False):
+def analyze(symbol, entry_tf, frames, balance, risk, cent=False, mode="balanced"):
     st = STACKS[entry_tf]
+    M = MODES.get(mode, MODES["balanced"])
     entry_df = frames[entry_tf]
     price = float(entry_df["close"].iloc[-1])
     cfg = se.SYMBOLS.get(symbol, {})
@@ -98,7 +109,7 @@ def analyze(symbol, entry_tf, frames, balance, risk, cent=False):
     # engine on the entry timeframe, filtered by its usual higher timeframe
     r = se.generate_signal(symbol, entry_tf, balance, risk, cent=cent, df=entry_df,
                            htf_df=frames[se.HIGHER_TF[entry_tf]])
-    entry_rules.validate(r, symbol, entry_tf, entry_df, balance, risk, cent)
+    entry_rules.validate(r, symbol, entry_tf, entry_df, balance, risk, cent, max_ext=M["ext"])
 
     ctx = {tf: se.Ctx(frames[tf].iloc[:-1], tf) for tf in frames_needed(entry_tf)}
     rd = {tf: read(c, price) for tf, c in ctx.items()}
@@ -117,7 +128,7 @@ def analyze(symbol, entry_tf, frames, balance, risk, cent=False):
 
     # ---- 2. location
     L = rd[st["location"]]
-    loc_ok = bias_ok and L["dir"] != -bias and _favourable(L["pos"], bias)
+    loc_ok = bias_ok and L["dir"] != -bias and _favourable(L["pos"], bias, M["loc"])
     zone_word = "discount" if bias == 1 else "premium"
     steps.append(dict(tf=LABEL[st["location"]], role="Location", dir=_dir_word(L["dir"]), ok=loc_ok,
                       detail=(f"price at {L['pos'] * 100:.0f}% of the range" if L["pos"] is not None else "no clear range")
@@ -125,7 +136,7 @@ def analyze(symbol, entry_tf, frames, balance, risk, cent=False):
 
     # ---- 3. setup (pullback on 15m)
     S = rd[st["setup"]]
-    setup_ok = loc_ok and S["dir"] != -bias and _favourable(S["pos"], bias)
+    setup_ok = loc_ok and S["dir"] != -bias and _favourable(S["pos"], bias, M["setup"])
     steps.append(dict(tf=LABEL[st["setup"]], role="Setup", dir=_dir_word(S["dir"]), ok=setup_ok,
                       detail=(f"pulled back to {S['pos'] * 100:.0f}% of the leg" if S["pos"] is not None else "no leg")
                              + (" - pullback done" if setup_ok else " - wait for the pullback")))
@@ -207,7 +218,7 @@ def analyze(symbol, entry_tf, frames, balance, risk, cent=False):
         def accept(entry, sl, tp1, tp2):
             if Lc.sh and Lc.sl:
                 H, Lo = float(Lc.h[Lc.sh[-1]]), float(Lc.l[Lc.sl[-1]])
-                if H > Lo and not _favourable((entry - Lo) / (H - Lo), d):
+                if H > Lo and not _favourable((entry - Lo) / (H - Lo), d, M["loc"]):
                     return False, tp2, f"zone is not in the 1H {zone_word}"
             obs = _levels_against(htf_ctxs, d, max(entry, price) if d == 1 else min(entry, price), 0.3 * a_set)
             near = min(obs, key=lambda x: abs(x - entry)) if obs else None
@@ -226,7 +237,37 @@ def analyze(symbol, entry_tf, frames, balance, risk, cent=False):
             r["limit_orders"].append(plan)
         else:
             r["limit_note"] = f"No limit order: {err}."
-    elif r["signal"] == "NO TRADE":
+    if (r["signal"] == "NO TRADE" and not r["limit_orders"] and M["deep"] and bias_ok
+            and L["dir"] != -bias and r.get("regime") != "VOLATILE"):
+        # price not in discount yet: offer a deeper limit at a 1H zone that IS in discount
+        d, Lc = bias, ctx[st["location"]]
+        a_loc = Lc.atr_now
+
+        def accept_deep(entry, sl, tp1, tp2):
+            if Lc.sh and Lc.sl:
+                H, Lo = float(Lc.h[Lc.sh[-1]]), float(Lc.l[Lc.sl[-1]])
+                if H > Lo and not _favourable((entry - Lo) / (H - Lo), d, M["loc"]):
+                    return False, tp2, f"no 1H zone in {zone_word}"
+            obs = _levels_against(htf_ctxs[:-1], d, max(entry, price) if d == 1 else min(entry, price), 0.3 * a_loc)
+            near = min(obs, key=lambda x: abs(x - entry)) if obs else None
+            if near is not None and (near - tp1) * d < 0:
+                return False, tp2, f"4H level at {fmt(near)} blocks TP1"
+            if near is not None and (near - tp2) * d < 0:
+                tp2 = near - d * 0.1 * a_loc
+            return True, tp2, ""
+
+        plan, err = lo._plan(Lc, symbol, d, price, balance, risk, cent, digits, accept=accept_deep)
+        if plan:
+            r["limit_note"] = ""
+            plan["expires_in_minutes"] = DEEP_LIMIT_EXPIRY_MIN
+            plan["bias"] = f"top-down {want}: deeper pullback to the 1H {zone_word}"
+            plan["topdown_ok"] = True
+            plan["deep"] = True
+            plan["zone"] = "1H " + plan["zone"]
+            r["limit_orders"].append(plan)
+        elif not r["limit_note"]:
+            r["limit_note"] = reasons[0] if reasons else ""
+    elif r["signal"] == "NO TRADE" and not r["limit_orders"] and not r["limit_note"]:
         r["limit_note"] = reasons[0] if reasons else ""
 
     if r["signal"] == "NO TRADE":
@@ -234,7 +275,14 @@ def analyze(symbol, entry_tf, frames, balance, risk, cent=False):
         if bias_ok and loc_ok and not r["limit_orders"] and not r.get("reasons"):
             r["reasons"] = ["Waiting for the 15m pullback and a 5m zone entry."]
     passed = sum(1 for s_ in steps if s_["ok"])
-    r["topdown"] = dict(bias=_dir_word(bias), steps=steps, passed=passed, total=len(steps),
+    Lc_ = ctx[st["location"]]
+    rng = None
+    if Lc_.sh and Lc_.sl and Lc_.h[Lc_.sh[-1]] > Lc_.l[Lc_.sl[-1]]:
+        rng = dict(tf=LABEL[st["location"]], high=round(float(Lc_.h[Lc_.sh[-1]]), digits),
+                   low=round(float(Lc_.l[Lc_.sl[-1]]), digits),
+                   limit=round(float(Lc_.l[Lc_.sl[-1]] + M["loc"] * (Lc_.h[Lc_.sh[-1]] - Lc_.l[Lc_.sl[-1]])), digits)
+                   if bias == 1 else round(float(Lc_.h[Lc_.sh[-1]] - M["loc"] * (Lc_.h[Lc_.sh[-1]] - Lc_.l[Lc_.sl[-1]])), digits))
+    r["topdown"] = dict(bias=_dir_word(bias), steps=steps, passed=passed, total=len(steps), mode=mode, range=rng,
                         perfect=r["signal"] in ("BUY", "SELL"),
                         stack=" → ".join(LABEL[t] for t in frames_needed(entry_tf)))
     r["topdown_dirs"] = {tf: rd[tf]["dir"] for tf in rd}        # used by trade management

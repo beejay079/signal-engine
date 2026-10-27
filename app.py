@@ -26,6 +26,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response
 
 import markets as mk          # must load before the engine is used: registers all markets
 import data
+import journal
 import notify
 import scanner
 import setups
@@ -40,6 +41,16 @@ def as_json(obj, status=200):
     return Response(json.dumps(obj, default=float), status_code=status, media_type="application/json")
 
 
+def chart_data(frames, bars=160):
+    """Candles for the chart: {timeframe: [[unix, open, high, low, close], ...]} for every top-down frame."""
+    out = {}
+    for tf, df in frames.items():
+        d = df.iloc[-bars:]
+        out[tf] = [[int(t.timestamp()), round(float(o), 6), round(float(h), 6), round(float(l), 6), round(float(c), 6)]
+                   for t, o, h, l, c in zip(d.index, d["open"], d["high"], d["low"], d["close"])]
+    return out
+
+
 def check_password(given):
     password = os.getenv("APP_PASSWORD")
     if password and given != password:
@@ -49,6 +60,13 @@ def check_password(given):
 @app.get("/", response_class=HTMLResponse)
 def index():
     return PAGE.read_text(encoding="utf-8")
+
+
+@app.get("/lightweight-charts.js")
+def chart_lib():
+    """TradingView Lightweight Charts v4.1.3 (Apache-2.0), served from the site itself."""
+    return Response(Path(__file__).with_name("lightweight-charts.js").read_bytes(), media_type="application/javascript",
+                    headers={"Cache-Control": "public, max-age=604800"})
 
 
 @app.get("/health")
@@ -63,9 +81,10 @@ def markets():
 
 @app.get("/api/signal")
 def signal(symbol: str = "XAU/USD", tf: str = "1min", balance: float = 100.0,
-           risk: float = 2.0, cent: bool = False,
+           risk: float = 2.0, cent: bool = False, mode: str = "",
            x_app_password: str | None = Header(default=None)):
     check_password(x_app_password)
+    mode = mode if mode in ("strict", "balanced", "active") else scanner.state["settings"].get("mode", "balanced")
     if symbol not in mk.BY_SYMBOL:
         raise HTTPException(400, f"Unknown market {symbol}")
     if not mk.allowed(symbol):
@@ -76,10 +95,12 @@ def signal(symbol: str = "XAU/USD", tf: str = "1min", balance: float = 100.0,
         raise HTTPException(400, "Balance must be above 0 and risk between 0.1% and 10%")
     try:
         frames = scanner.frames_for(symbol, tf, reserve=0, entry_max_age=20 if tf == "1min" else 60)
-        result = scanner.analyze(symbol, tf, frames, balance, risk, cent)
+        result = scanner.analyze(symbol, tf, frames, balance, risk, cent, mode)
         if result.get("setup"):
             result["setup"]["shown"] = True          # you saw it -> it gets fill / HOLD / WITHDRAW alerts
+        scanner.save_setups()
         result["demo"] = not data.live()
+        result["chart"] = chart_data(frames)
         result["name"] = mk.BY_SYMBOL[symbol]["name"]
     except data.Busy as e:
         return JSONResponse({"error": str(e)}, status_code=429)
@@ -94,7 +115,11 @@ def signal(symbol: str = "XAU/USD", tf: str = "1min", balance: float = 100.0,
 @app.post("/api/setup/clear")
 def setup_clear(symbol: str, tf: str, x_app_password: str | None = Header(default=None)):
     check_password(x_app_password)
-    return dict(cleared=setups.clear(symbol, tf))
+    ok = setups.clear(symbol, tf)
+    if ok:
+        journal.record(setups.last_finished(symbol, tf))
+        scanner.save_setups()
+    return dict(cleared=ok)
 
 
 @app.post("/api/trade")
@@ -115,19 +140,37 @@ def trade_add(payload: dict = Body(...), x_app_password: str | None = Header(def
         raise HTTPException(400, "Stop loss must be below entry for BUY (above for SELL), and TP on the other side")
     if sym not in scanner.state["settings"]["watch"]:
         scanner.update_settings(dict(watch=scanner.state["settings"]["watch"] + [sym]))
-    return as_json(setups.add_manual(sym, side, entry, sl, tp1, None, payload.get("lot")))
+    t = setups.add_manual(sym, side, entry, sl, tp1, None, payload.get("lot"))
+    scanner.save_setups()
+    return as_json(t)
 
 
 @app.delete("/api/trade")
 def trade_remove(symbol: str, x_app_password: str | None = Header(default=None)):
     check_password(x_app_password)
-    return dict(removed=setups.remove_manual(symbol))
+    ok = setups.remove_manual(symbol)
+    scanner.save_setups()
+    return dict(removed=ok)
 
 
 @app.get("/api/trades")
 def trades(x_app_password: str | None = Header(default=None)):
     check_password(x_app_password)
     return as_json(list(setups.manual.values()))
+
+
+@app.get("/api/journal")
+def journal_get(symbol: str = "", days: int = 0, x_app_password: str | None = Header(default=None)):
+    check_password(x_app_password)
+    sel = [x for x in journal.rows if not symbol or x["symbol"] == symbol][:200]
+    return as_json(dict(stats=journal.stats(symbol or None, days or None), trades=sel))
+
+
+@app.delete("/api/journal")
+def journal_reset(x_app_password: str | None = Header(default=None)):
+    check_password(x_app_password)
+    journal.reset()
+    return dict(ok=True)
 
 
 @app.get("/api/scan")

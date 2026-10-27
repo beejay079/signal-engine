@@ -116,6 +116,14 @@ def _plan(c, symbol, d, price, balance, risk, cent, digits, accept=None):
             obstacles = list(c.supports) + [c.prev_day_low] + ([c.bull_ob[1]] if c.bull_ob else [])
             obstacles = [x for x in obstacles if x and x < min(price, entry) - 0.3 * a]
         tp1, tp2 = entry + d * 2 * dist, entry + d * 3 * dist
+        # the target must be beyond today's price: back to the high/low price pulled back from
+        i = c.i
+        prior = float(c.h[max(0, i - 20):i + 1].max()) if d == 1 else float(c.l[max(0, i - 20):i + 1].min())
+        floor_tp = prior if (prior - price) * d > 0.3 * a else price + d * 0.3 * a
+        if (tp1 - floor_tp) * d < 0:
+            tp1 = floor_tp
+            tp2 = tp1 + d * dist
+        obstacles = [x for x in obstacles if (x - price) * d > 0.3 * a]
         nearest = min(obstacles, key=lambda x: abs(x - entry)) if obstacles else None
         if nearest is not None and (nearest - tp1) * d < 0:
             continue                                     # level before TP1 -> try next zone
@@ -131,7 +139,7 @@ def _plan(c, symbol, d, price, balance, risk, cent, digits, accept=None):
             side="BUY LIMIT" if d == 1 else "SELL LIMIT",
             entry=round(entry, digits), stop_loss=round(sl, digits),
             take_profit_1=round(tp1, digits), take_profit_2=round(tp2, digits),
-            rr_tp1="1:2", rr_tp2=f"1:{abs(tp2 - entry) / dist:.2g}",
+            rr_tp1=f"1:{abs(tp1 - entry) / dist:.2g}", rr_tp2=f"1:{abs(tp2 - entry) / dist:.2g}",
             sl_distance=round(dist, digits), distance_from_price=round(abs(price - entry), digits),
             lot_size=lots, risk_amount=round(risk_amt, 2), lot_note=note,
             zone=" + ".join(names), confluence=conf,
