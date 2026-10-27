@@ -24,9 +24,9 @@
   html, body { margin: 0; background: var(--bg); color: var(--text);
     font-family: Inter, system-ui, -apple-system, sans-serif; }
   body { padding: max(16px, env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom)); }
-  .wrap { max-width: 1180px; margin: 0 auto; }
+  .wrap { max-width: 520px; margin: 0 auto; }
 
-  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 16px; flex-wrap: wrap; }
+  header { display: flex; align-items: center; justify-content: space-between; margin: 4px 0 18px; }
   h1 { font-size: 20px; font-weight: 800; letter-spacing: -.02em; margin: 0; }
   h1 span { color: var(--accent); }
   .badge { font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 99px;
@@ -62,7 +62,7 @@
   .go:disabled { opacity: .55; }
   .hint { text-align: center; color: var(--faint); font-size: 12px; margin: 10px 0 0; min-height: 16px; }
 
-  .card { margin-top: 0; border-radius: 16px; border: 1px solid var(--line); background: var(--panel);
+  .card { margin-top: 18px; border-radius: 16px; border: 1px solid var(--line); background: var(--panel);
     overflow: hidden; }
   .hero { padding: 18px 18px 16px; }
   .hero.buy { background: var(--buy-bg); } .hero.sell { background: var(--sell-bg); }
@@ -110,365 +110,88 @@
   .vote i.b { color: var(--buy); } .vote i.s { color: var(--sell); }
   .vote div small { display: block; color: var(--faint); }
 
-  .tabs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; max-width: 520px; background: var(--panel); border: 1px solid var(--line);
-    border-radius: 12px; padding: 4px; margin-bottom: 18px; }
-  .tabs button { border: 0; background: transparent; color: var(--muted); border-radius: 9px; padding: 10px 0;
-    font: 700 14px Inter, sans-serif; cursor: pointer; position: relative; }
-  .tabs button.on { background: var(--panel-2); color: var(--text); box-shadow: 0 0 0 1px var(--line); }
-  .tabs .dot { position: absolute; top: 8px; margin-left: 4px; width: 7px; height: 7px; border-radius: 50%; background: var(--buy); }
-  .cats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
-  .cat { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 12px;
-    padding: 12px 4px; font: 500 14px Inter, sans-serif; cursor: pointer; line-height: 1.15; min-height: 46px; }
-  .cat.on { font-weight: 800; border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-  .mkts { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
-  .mk { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 10px;
-    padding: 9px 11px; font: 600 13px Inter, sans-serif; cursor: pointer; display: flex; align-items: center; gap: 6px; }
-  .mk small { color: var(--faint); font-weight: 500; font-size: 11px; }
-  .mk.on { background: var(--accent); border-color: var(--accent); color: #06111f; }
-  .mk.on small { color: rgba(6,17,31,.7); }
-  .mk.locked { opacity: .45; cursor: not-allowed; }
-  .mk .star { color: #f2b544; }
-  .grade { font: 800 12px var(--mono); padding: 3px 8px; border-radius: 6px; margin-left: 8px; vertical-align: 6px; }
-  .grade.Ap { background: var(--buy); color: #04140c; } .grade.A { background: rgba(31,199,126,.25); color: var(--buy); }
-  .grade.B { background: rgba(242,181,68,.2); color: var(--wait); } .grade.C { background: var(--panel-2); color: var(--muted); }
-  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; margin-bottom: 14px; }
-  .panel h2 { margin: 0 0 10px; font-size: 15px; font-weight: 800; display: flex; justify-content: space-between; align-items: center; }
-  .stat { display: flex; justify-content: space-between; font-size: 13px; padding: 5px 0; color: var(--muted); }
-  .stat b { color: var(--text); font-weight: 600; }
-  .meter { height: 8px; background: var(--panel-2); border-radius: 99px; overflow: hidden; margin: 8px 0 4px; }
-  .meter i { display: block; height: 100%; background: var(--accent); }
-  .meter i.over { background: var(--sell); }
-  .switch { position: relative; width: 44px; height: 26px; flex: none; }
-  .switch input { opacity: 0; width: 0; height: 0; }
-  .switch span { position: absolute; inset: 0; background: var(--panel-2); border: 1px solid var(--line); border-radius: 99px; transition: .2s; }
-  .switch span::after { content: ""; position: absolute; width: 20px; height: 20px; left: 2px; top: 2px; background: var(--muted); border-radius: 50%; transition: .2s; }
-  .switch input:checked + span { background: var(--buy); border-color: var(--buy); }
-  .switch input:checked + span::after { transform: translateX(18px); background: #fff; }
-  .wl-cat { font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin: 12px 0 6px; }
-  .wl { display: flex; flex-wrap: wrap; gap: 6px; }
-  .wl label { border: 1px solid var(--line); border-radius: 9px; padding: 7px 10px; font-size: 13px; cursor: pointer; display: flex; gap: 6px; align-items: center; }
-  .wl label.on { border-color: var(--accent); background: rgba(77,163,255,.1); }
-  .wl label.locked { opacity: .4; cursor: not-allowed; }
-  .wl input { display: none; }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
-  select { width: 100%; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 10px;
-    padding: 10px; font: 600 14px Inter, sans-serif; }
-  .btn2 { border: 1px solid var(--line); background: var(--panel-2); color: var(--text); border-radius: 12px; padding: 12px;
-    font: 700 14px Inter, sans-serif; cursor: pointer; width: 100%; margin-top: 10px; }
-  .feed .item { border-top: 1px solid var(--line); padding: 10px 0; font-size: 13px; }
-  .feed .item:first-child { border-top: 0; }
-  .feed .item b { font-size: 14px; } .feed .item pre { margin: 4px 0 0; white-space: pre-wrap; font: 12px/1.5 var(--mono); color: var(--muted); }
-  .row3 { display: grid; grid-template-columns: 1.4fr 1fr .8fr; gap: 6px; padding: 7px 0; border-top: 1px solid var(--line); font-size: 13px; align-items: center; }
-  .row3:first-child { border-top: 0; }
-  .ok { color: var(--buy); } .bad { color: var(--sell); }
-  .hidden { display: none !important; }
-  .td { padding: 12px 18px 14px; border-bottom: 1px solid var(--line); }
-  .td h3 { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; display: flex; justify-content: space-between; }
-  .tdrow { display: grid; grid-template-columns: 22px 54px 1fr; gap: 6px; padding: 6px 0; font-size: 13px; border-top: 1px dashed var(--line); align-items: start; }
-  .tdrow:first-of-type { border-top: 0; }
-  .tdrow i { font-style: normal; font-weight: 800; } .tdrow i.y { color: var(--buy); } .tdrow i.n { color: var(--sell); }
-  .tdrow b { font-weight: 700; } .tdrow small { display: block; color: var(--muted); font-size: 12px; }
-  .problems div { font-size: 13px; padding: 6px 0; border-top: 1px solid var(--line); color: var(--wait); }
-  .problems div:first-child { border-top: 0; }
-  .form4 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
-  .form4 input { width: 100%; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: 600 14px var(--mono); }
-  .advice { font-weight: 800; font-size: 15px; }
-  .st { font: 700 12px Inter, sans-serif; padding: 3px 8px; border-radius: 6px; white-space: nowrap; }
-  .st-wait { background: rgba(242,181,68,.15); color: var(--wait); } .st-open { background: rgba(77,163,255,.15); color: var(--accent); }
-  .st-win { background: rgba(31,199,126,.15); color: var(--buy); } .st-loss { background: rgba(255,84,104,.15); color: var(--sell); }
-  .st-off { background: var(--panel-2); color: var(--muted); }
   .foot { color: var(--faint); font-size: 11px; text-align: center; margin-top: 22px; line-height: 1.5; }
   .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(6,17,31,.3);
     border-top-color: #06111f; border-radius: 50%; animation: s .7s linear infinite; vertical-align: -2px; margin-right: 8px; }
   @keyframes s { to { transform: rotate(360deg); } }
-
-  /* ---------- dashboard layout ---------- */
-  .ticker { display: flex; align-items: center; gap: 10px; background: var(--panel); border: 1px solid var(--line);
-    border-radius: 99px; padding: 6px 14px 6px 12px; font-size: 13px; cursor: pointer; order: 3; width: 100%; justify-content: space-between; }
-  .ticker .tk-name { color: #f2b544; font-weight: 700; }
-  .ticker b { font: 700 15px var(--mono); }
-  .pill2 { font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 99px; background: var(--panel-2); color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
-  .pill2.bull { background: var(--buy-bg); color: var(--buy); } .pill2.bear { background: var(--sell-bg); color: var(--sell); }
-  .tk-td { font: 600 11px var(--mono); color: var(--muted); }
-  .layout { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "controls" "chart" "result" "mytrade"; }
-  .a-controls { grid-area: controls; margin: 0; } .a-chart { grid-area: chart; }
-  .a-result { grid-area: result; min-width: 0; } .a-mytrade { grid-area: mytrade; margin: 0; }
-  .chartcard { padding: 0; }
-  .chead { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 14px 8px; flex-wrap: wrap; }
-  .chead b { font-size: 15px; } .chead .muted { margin: 0; }
-  .tfs { display: flex; gap: 4px; }
-  .tfs button { border: 1px solid var(--line); background: transparent; color: var(--muted); border-radius: 8px;
-    padding: 5px 9px; font: 700 12px Inter, sans-serif; cursor: pointer; }
-  .tfs button.on { background: var(--panel-2); color: var(--text); border-color: var(--accent); }
-  #chart { height: 340px; width: 100%; }
-  .legend { display: flex; flex-wrap: wrap; gap: 12px; padding: 8px 14px 12px; font-size: 11px; color: var(--muted); border-top: 1px solid var(--line); }
-  .legend i { display: inline-block; width: 14px; height: 0; border-top: 2px solid; margin-right: 5px; vertical-align: middle; }
-  .legend i.d { border-top-style: dashed; } .legend i.o { border-top-style: dotted; }
-  .chart-empty { height: 340px; display: grid; place-items: center; color: var(--faint); font-size: 13px; }
-  .mode-hint { font-size: 12px; color: var(--faint); margin: 6px 0 14px; min-height: 16px; }
-  .scgrid, .jgrid { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
-  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
-  .tile { background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
-  .tile .k { font-size: 10px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
-  .tile .v { font: 700 20px var(--mono); margin-top: 2px; } .tile .x { font-size: 11px; color: var(--faint); }
-  #jrCurve { height: 200px; }
-  .jrow { display: grid; grid-template-columns: 1.3fr .9fr .8fr .6fr; gap: 6px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13px; align-items: center; }
-  .jrow:first-child { border-top: 0; } .jrow small { display: block; color: var(--faint); font-size: 11px; }
-  .seg.small button { padding: 6px 10px; font-size: 12px; white-space: nowrap; }
-  @media (min-width: 1000px) {
-    body { padding-left: 24px; padding-right: 24px; }
-    .ticker { order: 0; width: auto; }
-    .layout { grid-template-columns: minmax(0, 1fr) 360px;
-      grid-template-areas: "chart controls" "result mytrade"; align-items: start; }
-    #chart, .chart-empty { height: 420px; }
-    .scgrid, .jgrid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
-    .tiles { grid-template-columns: repeat(6, 1fr); }
-  }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header class="topbar">
+  <header>
     <h1>Signal<span>Engine</span></h1>
-    <div class="ticker" id="ticker" title="Open Gold">
-      <span class="tk-name">★ Gold</span><b id="tkPrice">—</b>
-      <span class="pill2" id="tkBias">bias —</span><span class="tk-td" id="tkTd"></span>
-    </div>
     <span id="mode" class="badge">29 strategies</span>
   </header>
 
-  <nav class="tabs"><button data-t="signal" class="on">Trade</button><button data-t="scanner">Scanner<span class="dot hidden" id="scanDot"></span></button><button data-t="journal">Journal</button></nav>
+  <p class="label">Pair</p>
+  <div class="pairs" id="pairs"></div>
 
-  <section id="tab-signal" class="layout">
-    <div class="panel a-controls">
-      <p class="label">Market</p>
-      <div class="cats" id="cats"></div>
-      <div class="mkts" id="mkts"></div>
-      <div class="row">
-        <div>
-          <p class="label">Entry timeframe</p>
-          <div class="seg" id="tf">
-            <button data-v="1min">1m</button><button data-v="5min">5m</button><button data-v="15min">15m</button><button data-v="1h">1h</button>
-          </div>
-        </div>
-        <div>
-          <p class="label">Risk per trade</p>
-          <div class="field"><input id="risk" inputmode="decimal" value="2"><span>%</span></div>
-        </div>
-      </div>
-      <p class="label">How many trades</p>
-      <div class="seg" id="modeSeg"><button data-v="strict">Strict</button><button data-v="balanced">Balanced</button><button data-v="active">Active</button></div>
-      <p class="mode-hint" id="modeHint"></p>
-      <p class="label">Balance (USD)</p>
-      <div class="field" style="margin-bottom:12px"><span>$</span><input id="balance" inputmode="decimal" value="100"></div>
-      <div class="toggles">
-        <label><input type="checkbox" id="cent"> Cent account</label>
-        <label><input type="checkbox" id="watch"> Live (1s)</label>
-      </div>
-      <button class="go" id="go">Get signal</button>
-      <p class="hint" id="hint"></p>
-      <p class="hint" id="liveNote"></p>
-    </div>
-
-    <div class="card chartcard a-chart">
-      <div class="chead"><div><b id="chTitle">Chart</b> <span class="muted" id="chSub"></span></div><div class="tfs" id="chartTfs"></div></div>
-      <div id="chart"><div class="chart-empty">Tap <b>&nbsp;Get signal&nbsp;</b> to load the chart</div></div>
-      <div class="legend">
-        <span><i style="border-color:var(--accent)"></i>Entry</span><span><i style="border-color:var(--sell)"></i>Stop loss</span>
-        <span><i style="border-color:var(--buy)"></i>Take profit</span><span><i class="o" style="border-color:var(--faint)"></i>1H range high / low</span>
-        <span><i class="d" style="border-color:var(--wait)"></i>Discount / premium limit</span>
+  <div class="row">
+    <div>
+      <p class="label">Timeframe</p>
+      <div class="seg" id="tf">
+        <button data-v="1min">1m</button><button data-v="5min">5m</button><button data-v="15min">15m</button><button data-v="1h">1h</button>
       </div>
     </div>
-
-    <div class="a-result" id="out"></div>
-
-    <div class="panel a-mytrade">
-      <h2>I'm in a trade <span class="muted" style="font-size:12px;font-weight:500">get HOLD / WITHDRAW alerts</span></h2>
-      <div class="seg" id="mtSide"><button data-v="BUY" class="on">BUY</button><button data-v="SELL">SELL</button></div>
-      <div class="form4">
-        <input id="mtEntry" inputmode="decimal" placeholder="Entry price">
-        <input id="mtSL" inputmode="decimal" placeholder="Stop loss">
-        <input id="mtTP" inputmode="decimal" placeholder="Take profit (optional)">
-        <input id="mtLot" inputmode="decimal" placeholder="Lot (optional)">
-      </div>
-      <button class="btn2" id="mtAdd">Watch this trade on <span id="mtSym">Gold</span></button>
-      <p class="hint" id="mtHint"></p>
-      <div id="mtList"></div>
+    <div>
+      <p class="label">Risk per trade</p>
+      <div class="field"><input id="risk" inputmode="decimal" value="2"><span>%</span></div>
     </div>
-  </section>
+  </div>
 
-  <section id="tab-scanner" class="hidden">
-   <div class="scgrid"><div>
-<div class="panel">
-      <h2>Auto-scanner <label class="switch"><input type="checkbox" id="scEnabled"><span></span></label></h2>
-      <div class="stat">Status <b id="scStatus">–</b></div>
-      <div class="stat">Last scan <b id="scLast">–</b></div>
-      <div class="stat">Phone alerts <b id="scChannels">–</b></div>
-      <div class="stat">Data used today <b id="scCredits">–</b></div>
-      <div class="muted" id="scNote"></div>
-      <button class="btn2" id="scTest">Send test notification</button>
-    </div>
+  <p class="label">Balance (USD)</p>
+  <div class="field" style="margin-bottom:12px"><span>$</span><input id="balance" inputmode="decimal" value="100"></div>
 
-    <div class="panel">
-      <h2>Why am I not getting alerts?</h2>
-      <div class="problems" id="scProblems"><div class="muted">Checking…</div></div>
-    </div>
+  <div class="toggles">
+    <label><input type="checkbox" id="cent"> Cent account</label>
+    <label><input type="checkbox" id="watch"> Watch (check every 30s)</label>
+  </div>
 
-    <div class="panel">
-      <h2>Alerts</h2>
-      <div class="feed" id="scAlerts"><div class="muted">No alerts yet.</div></div>
-    </div>
+  <button class="go" id="go">Get signal</button>
+  <p class="hint" id="hint"></p>
 
-       </div><div>
-<div class="panel">
-      <h2>Latest check per market</h2>
-      <div id="scLatest"><div class="muted">Nothing scanned yet.</div></div>
-    </div>
+  <div id="out"></div>
 
-    <div class="panel">
-      <h2>What to watch</h2>
-      <div class="grid2">
-        <div><p class="label">Gold checks</p><select id="scGoldTf"><option value="1min">Every 1 min</option><option value="5min">Every 5 min</option><option value="15min">Every 15 min</option></select></div>
-        <div><p class="label">Gold alert from</p><select id="scGoldGrade"><option value="A+">A+ only</option><option value="A">A and up</option><option value="B">B and up</option></select></div>
-        <div><p class="label">Others checks</p><select id="scOtherTf"><option value="5min">Every 5 min</option><option value="15min">Every 15 min</option></select></div>
-        <div><p class="label">Others alert from</p><select id="scOtherGrade"><option value="A+">A+ only</option><option value="A">A and up</option><option value="B">B and up</option></select></div>
-      </div>
-      <div class="toggles" style="margin:14px 0 0;flex-direction:column;gap:10px">
-        <label><input type="checkbox" id="scGoldUpd"> Gold HOLD / WITHDRAW updates every 15 min while in a trade</label>
-        <label><input type="checkbox" id="scGoldBias"> Alert when the Gold bias changes</label>
-        <label><input type="checkbox" id="scGoldLimit"> Gold limit-order setups (top-down approved)</label>
-        <label><input type="checkbox" id="scLimit"> Other markets' limit setups (2+ confluences)</label>
-        <label><input type="checkbox" id="scHello"> Morning "scanner online" message</label>
-        <label><input type="checkbox" id="scGoldHourly"> Gold status every hour (bias, plan, your trade)</label>
-      </div>
-      <div id="scWatch"></div>
-      <p class="label" style="margin-top:14px">Daily data budget</p>
-      <div class="meter"><i id="scMeter"></i></div>
-      <div class="muted" id="scBudget"></div>
-      <button class="go" id="scSave" style="margin-top:14px">Save scanner settings</button>
-      <p class="hint" id="scSaved"></p>
-    </div>
-       </div></div>
-<p class="foot">Every check is a full top-down analysis (Daily/4H bias → 1H location → 15m pullback → 5m entry).
-    Grades: A+ ≥ 85 · A ≥ 75 · B ≥ 65 — from strategy agreement, entry triggers, higher-timeframe trend and regime. Scans 08:00–21:00 Lagos time, Mon–Fri (crypto every day).</p>
-    </section>
-
-  <section id="tab-journal" class="hidden">
-    <div class="panel">
-      <h2>Results <div class="seg small" id="jrDays"><button data-v="7">7 days</button><button data-v="30">30 days</button><button data-v="0" class="on">All</button></div></h2>
-      <select id="jrSym"><option value="">All markets</option></select>
-      <div class="tiles" id="jrTiles"></div>
-      <p class="label">Equity curve (R = times your risk)</p>
-      <div id="jrCurve"><div class="chart-empty" style="height:200px">No finished trades yet</div></div>
-      <p class="muted" id="jrNote"></p>
-    </div>
-    <div class="jgrid">
-      <div class="panel"><h2>By market</h2><div id="jrBySym"><div class="muted">—</div></div>
-        <h2 style="margin-top:16px">Setups not taken</h2><div id="jrNot"><div class="muted">—</div></div></div>
-      <div class="panel"><h2>Trades</h2><div id="jrList"><div class="muted">No trades yet.</div></div>
-        <button class="btn2" id="jrReset">Reset journal</button></div>
-    </div>
-    <p class="foot">Win = TP1 hit (+2R or more). Loss = stopped out (−1R). Limits that expired or were missed are not counted.
-    At 1:2 you break even with a 33% win rate — anything above that is profit.</p>
-  </section>
-
-  <p class="foot">Not financial advice. Check the price in MT5 and the news calendar before entering.</p>
+  <p class="foot">Higher-timeframe filter: 1m→15m · 5m→1h · 15m→4h · 1h→4h<br>
+  Not financial advice. Check the price in MT5 and the news calendar before entering.</p>
 </div>
 
-<script src="/lightweight-charts.js"></script>
 <script>
-let MARKETS = [], CATS = [], BY = {};
+const PAIRS = [["XAU/USD","Gold"],["EUR/USD","EU"],["GBP/USD","GU"],["USD/JPY","UJ"],["BTC/USD","BTC"]];
 const $ = s => document.querySelector(s);
 const store = {
   get(k, d) { try { const v = localStorage.getItem("se_" + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem("se_" + k, JSON.stringify(v)); } catch {} },
 };
 let state = {
-  cat: store.get("cat", "Metals"),
   symbol: store.get("symbol", "XAU/USD"), tf: store.get("tf", "1min"),
   balance: store.get("balance", 100), risk: store.get("risk", 2), cent: store.get("cent", false),
-  mode: store.get("mode", "balanced"),
 };
 let password = store.get("pw", "");
 let watchTimer = null, lastSignal = null, busy = false;
 
-// ---------- password-aware fetch ----------
-async function api(url, opts = {}) {
-  opts.headers = Object.assign({}, opts.headers || {}, password ? { "X-App-Password": password } : {});
-  const res = await fetch(url, opts);
-  if (res.status === 401) {
-    const pw = prompt("Enter your app password");
-    if (pw) { password = pw; store.set("pw", pw); return api(url, opts); }
-    throw new Error("Password needed");
-  }
-  return res;
-}
-
-// ---------- markets ----------
-async function loadMarkets() {
-  try {
-    const d = await (await fetch("/api/markets")).json();
-    MARKETS = d.markets; CATS = d.categories; BY = Object.fromEntries(MARKETS.map(m => [m.symbol, m]));
-  } catch { MARKETS = [{ symbol: "XAU/USD", name: "Gold", category: "Metals" }]; CATS = ["Metals"]; BY = { "XAU/USD": MARKETS[0] }; }
-  if (!BY[state.symbol] || BY[state.symbol].locked) state.symbol = "XAU/USD";
-  if (!CATS.includes(state.cat)) state.cat = BY[state.symbol].category;
-  $("#cats").innerHTML = CATS.map(c => `<button class="cat" data-v="${c}">${c}</button>`).join("");
-  paint();
-}
-function short(sym) { return sym.replace("/", ""); }
-function paintMarkets() {
-  const list = MARKETS.filter(m => m.category === state.cat);
-  $("#mkts").innerHTML = list.map(m => `<button class="mk${m.locked ? " locked" : ""}" data-v="${m.symbol}"
-      title="${m.locked ? "Needs the Twelve Data " + m.plan + " plan" : ""}">${m.symbol === "XAU/USD" ? '<span class="star">★</span>' : ""}${esc(m.name)}
-      ${m.locked ? `<small>🔒 ${m.plan}</small>` : m.name === short(m.symbol) ? "" : `<small>${short(m.symbol)}</small>`}</button>`).join("");
-}
-$("#cats").onclick = e => { const b = e.target.closest(".cat"); if (!b) return;
-  state.cat = b.dataset.v; store.set("cat", state.cat); paint(); };
-$("#mkts").onclick = e => { const b = e.target.closest(".mk"); if (!b) return;
-  const m = BY[b.dataset.v];
-  if (m.locked) { $("#hint").textContent = `${m.name} needs the Twelve Data ${m.plan[0].toUpperCase() + m.plan.slice(1)} plan (set DATA_PLAN on Render after upgrading).`; return; }
-  $("#hint").textContent = "";
-  state.symbol = m.symbol; store.set("symbol", state.symbol); paint(); lastSignal = null; getSignal();
-  if ($("#watch").checked) { startLive(); scheduleCandleRefresh(); } };
-
 // ---------- controls ----------
+$("#pairs").innerHTML = PAIRS.map(([s, n]) =>
+  `<button class="chip" data-v="${s}">${n}<small>${s.replace("/USD","").replace("USD/","")}</small></button>`).join("");
 function paint() {
-  document.querySelectorAll("#cats .cat").forEach(b => b.classList.toggle("on", b.dataset.v === state.cat));
-  paintMarkets(); if (typeof paintMtSym === "function") paintMtSym();
-  document.querySelectorAll("#mkts .mk").forEach(b => b.classList.toggle("on", b.dataset.v === state.symbol));
+  document.querySelectorAll("#pairs .chip").forEach(b => b.classList.toggle("on", b.dataset.v === state.symbol));
   document.querySelectorAll("#tf button").forEach(b => b.classList.toggle("on", b.dataset.v === state.tf));
-  document.querySelectorAll("#modeSeg button").forEach(b => b.classList.toggle("on", b.dataset.v === state.mode));
-  $("#modeHint").textContent = MODE_HINT[state.mode] || "";
   $("#balance").value = state.balance; $("#risk").value = state.risk; $("#cent").checked = state.cent;
 }
+$("#pairs").onclick = e => { const b = e.target.closest(".chip"); if (!b) return;
+  state.symbol = b.dataset.v; store.set("symbol", state.symbol); paint(); lastSignal = null; getSignal(); };
 $("#tf").onclick = e => { const b = e.target.closest("button"); if (!b) return;
-  state.tf = b.dataset.v; store.set("tf", state.tf); paint(); scheduleCandleRefresh(); };
+  state.tf = b.dataset.v; store.set("tf", state.tf); paint(); };
 $("#balance").onchange = e => { state.balance = parseFloat(e.target.value) || 100; store.set("balance", state.balance); };
 $("#risk").onchange = e => { state.risk = parseFloat(e.target.value) || 2; store.set("risk", state.risk); };
 $("#cent").onchange = e => { state.cent = e.target.checked; store.set("cent", state.cent); };
 $("#go").onclick = () => getSignal();
-const MODE_HINT = {
-  strict: "Fewest trades. Buys only in the lower 60% of the 1H range, no chasing.",
-  balanced: "Recommended. Lower 70% of the 1H range, plus deeper limit orders at 1H zones.",
-  active: "Most trades. Lower 80% of the 1H range — more signals, more stop-outs.",
-};
-$("#modeSeg").onclick = async e => { const b = e.target.closest("button"); if (!b) return;
-  state.mode = b.dataset.v; store.set("mode", state.mode); paint();
-  try { await api("/api/scanner/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: state.mode }) }); } catch {}
-  getSignal(); };
-$("#ticker").onclick = () => { state.cat = "Metals"; state.symbol = "XAU/USD"; store.set("cat", state.cat); store.set("symbol", state.symbol);
-  document.querySelector(".tabs button[data-t='signal']").click(); paint(); getSignal(); };
-$("#watch").checked = store.get("live", false);
 $("#watch").onchange = e => {
-  store.set("live", e.target.checked);
-  clearTimeout(watchTimer);
-  if (e.target.checked) { getSignal(); scheduleCandleRefresh(); startLive(); } else { stopLive(); }
-  $("#hint").textContent = e.target.checked ? "Live: price every second · full top-down re-check at every candle close." : "";
-  return;
+  clearInterval(watchTimer);
+  if (e.target.checked) { getSignal(); watchTimer = setInterval(() => getSignal(true), 30000); }
   $("#hint").textContent = e.target.checked ? "Watching… you'll get a beep when a trade appears." : "";
 };
-loadMarkets().then(() => { loadTrades(); refreshScanner(); if ($("#watch").checked) $("#watch").onchange({ target: $("#watch") }); setInterval(() => document.visibilityState === "visible" && loadTrades(), 60000); });
+paint();
 
 // ---------- fetch ----------
 async function getSignal(silent = false) {
@@ -477,17 +200,19 @@ async function getSignal(silent = false) {
   const btn = $("#go");
   if (!silent) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Reading the market…'; }
   const q = new URLSearchParams({ symbol: state.symbol, tf: state.tf, balance: state.balance,
-                                  risk: state.risk, cent: state.cent, mode: state.mode });
+                                  risk: state.risk, cent: state.cent });
   try {
-    const res = await api("/api/signal?" + q);
+    const res = await fetch("/api/signal?" + q, { headers: password ? { "X-App-Password": password } : {} });
+    if (res.status === 401) {
+      const pw = prompt("Enter your app password");
+      if (pw) { password = pw; store.set("pw", pw); busy = false; return getSignal(silent); }
+      throw new Error("Password needed");
+    }
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || data.detail || "Something went wrong");
     render(data);
-    drawChart(data);
-    calibrate(data);
-    if (data.symbol === "XAU/USD") setTicker(data.price, (data.topdown || {}).bias, data.topdown);
-    if (data.setup && data.setup.new && lastSignal !== data.setup.id) alertTrade();
-    lastSignal = data.setup ? data.setup.id : null;
+    if (data.signal !== "NO TRADE" && lastSignal !== data.signal + data.entry) alertTrade();
+    lastSignal = data.signal === "NO TRADE" ? null : data.signal + data.entry;
   } catch (err) {
     $("#out").innerHTML = `<div class="card"><div class="err">${esc(err.message)}</div></div>`;
   } finally {
@@ -496,7 +221,7 @@ async function getSignal(silent = false) {
 }
 
 // ---------- render ----------
-function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 function render(r) {
   const badge = $("#mode");
   badge.className = "badge " + (r.demo ? "demo" : "live");
@@ -509,65 +234,47 @@ function render(r) {
   const sub = `${r.interval}: <b>${esc(r.regime)}</b> (${esc(r.regime_reason)}) · ${r.buy_votes} buy / ${r.sell_votes} sell${conf}
                <br>${r.htf} trend: <b>${esc(r.htf_bias)}</b> · checked ${now}`;
 
-  const lv = (k, v, x, c = "") => `<div class="lv ${c}" data-copy="${v}"><div class="k">${k}</div><div class="v">${v}</div><div class="x">${x}</div></div>`;
-  const gradeTag = g => g ? `<span class="grade ${g === "A+" ? "Ap" : g}">${g}</span>` : "";
-  const ST = { "WAITING": ["Waiting for fill", "st-wait"], "FILLED": ["Filled — in trade", "st-open"], "IN TRADE": ["In trade", "st-open"],
-               "TP1 HIT": ["TP1 hit ✓", "st-win"], "STOPPED": ["Stopped out", "st-loss"], "EXPIRED": ["Expired — cancel it", "st-off"],
-               "MISSED": ["Missed — price left without filling", "st-off"], "INVALID": ["Invalid — zone broke", "st-off"],
-               "CANCELLED": ["Cancelled (other side filled)", "st-off"], "CLEARED": ["Cleared", "st-off"] };
-  const st = o => `<span class="st ${ST[o.status][1]}">${ST[o.status][0]}</span>`;
-  let html;
-  const S = r.setup;
-  if (S) {
-    const os = S.orders, live = os.filter(o => ["WAITING", "FILLED", "IN TRADE"].includes(o.status));
-    const main = live[0] || os[0], buy = main.side.startsWith("BUY");
-    const title = os.length > 1 && live.length > 1 ? "Range limits"
-                : main.kind === "market" ? `${main.side} ${S.new ? "now" : "— in trade"}` : main.side.replace("LIMIT", "limit");
-    html = `<div class="card"><div class="hero ${buy ? "buy" : "sell"}${main.kind === "limit" ? " pending" : ""}">
-      <div class="verdict"><b>${title}${gradeTag(S.grade)}</b><span>${esc(r.name || r.symbol)} ${r.price}</span></div>
-      <div class="sub">${S.new ? "New setup" : `🔒 Locked since ${hhmm(S.created)} — levels stay fixed until it finishes`}<br>${sub}</div>
-      <div class="sub" id="liveTrade"></div></div>`;
-    os.forEach(o => {
-      const b = o.side.startsWith("BUY");
-      const dist = Math.abs(r.price - o.entry);
-      html += `${os.length > 1 ? `<div class="section sidehead ${b ? "b" : "s"}">${o.side}</div>` : ""}
+  const limits = r.limit_orders || [];
+  const lcls = !trade && limits.length === 1 ? (limits[0].side.startsWith("BUY") ? "buy" : "sell") : cls;
+  const title = trade ? r.signal + " now" : limits.length === 1 ? limits[0].side.replace("LIMIT", "limit")
+              : limits.length > 1 ? "Range limits" : "No trade";
+  let html = `<div class="card"><div class="hero ${lcls}${!trade && limits.length ? " pending" : ""}">
+    <div class="verdict"><b>${title}</b><span>${esc(r.symbol)} ${r.price}</span></div>
+    <div class="sub">${sub}</div></div>`;
+
+  if (trade) {
+    const lv = (k, v, x, c = "") => `<div class="lv ${c}" data-copy="${v}"><div class="k">${k}</div><div class="v">${v}</div><div class="x">${x}</div></div>`;
+    html += `<div class="levels">
+      ${lv("Entry (market)", r.entry, "tap to copy")}
+      ${lv("Lot size", r.lot_size, "risk $" + r.risk_amount)}
+      ${lv("Stop loss", r.stop_loss, "−" + r.sl_distance, "sl")}
+      ${lv("Take profit 1", r.take_profit_1, r.rr_tp1, "tp")}
+      ${lv("Take profit 2", r.take_profit_2, r.rr_tp2, "tp")}
+      ${lv("Agreement", r.confidence + "%", r.buy_votes + " buy / " + r.sell_votes + " sell")}
+    </div>
+    <div class="section"><h3>Entry triggers</h3>${r.triggers.map(esc).join(" · ")}</div>`;
+  } else if (limits.length) {
+    const lv = (k, v, x, c = "") => `<div class="lv ${c}" data-copy="${v}"><div class="k">${k}</div><div class="v">${v}</div><div class="x">${x}</div></div>`;
+    limits.forEach(p => {
+      const buy = p.side.startsWith("BUY");
+      html += `${limits.length > 1 ? `<div class="section sidehead ${buy ? "b" : "s"}">${p.side}</div>` : ""}
       <div class="levels">
-        ${lv(o.kind === "market" ? "Entry (market)" : o.side.replace(" LIMIT", " limit at"), o.entry,
-             o.kind === "market" ? "entered at" : (b ? "▼ " : "▲ ") + dist.toFixed(r.price < 50 ? 5 : 2) + " from price")}
-        ${lv("Lot size", o.lot_size, "risk $" + Number(o.risk_amount).toFixed(2))}
-        ${lv("Stop loss", o.stop_loss, esc(o.sl_reason || "beyond the zone"), "sl")}
-        ${lv("Take profit 1", o.take_profit_1, "1:2", "tp")}
-        ${lv("Take profit 2", o.take_profit_2, o.rr_tp2 || "1:3", "tp")}
-        <div class="lv"><div class="k">Status</div><div class="v" style="font-size:14px">${st(o)}</div>
-          <div class="x">${o.status === "WAITING" && o.expires_at ? "cancel at " + hhmm(o.expires_at) : o.filled_at && o.kind === "limit" ? "filled " + hhmm(o.filled_at) : ""}</div></div>
+        ${lv(p.side.replace(" LIMIT", " limit at"), p.entry, (buy ? "▼ " : "▲ ") + p.distance_from_price + " from price")}
+        ${lv("Lot size", p.lot_size, "risk $" + p.risk_amount)}
+        ${lv("Stop loss", p.stop_loss, "−" + p.sl_distance, "sl")}
+        ${lv("Take profit 1", p.take_profit_1, p.rr_tp1, "tp")}
+        ${lv("Take profit 2", p.take_profit_2, p.rr_tp2, "tp")}
+        ${lv("Cancel at", clock(p.expires_in_minutes), "if not filled (" + p.expires_in_minutes + " min)")}
       </div>
-      <div class="section"><h3>Why this entry is valid</h3>${esc(o.zone || "")}
-        <div class="muted">${b ? "Exit if a candle closes below" : "Exit if a candle closes above"} ${o.stop_loss} — the setup is wrong.</div>
-        ${o.lot_note ? `<div class="warn">⚠ ${esc(o.lot_note)}</div>` : ""}</div>`;
+      <div class="section"><h3>Zone</h3>${esc(p.zone)}${p.confluence > 1 ? ` <span class="pill">${p.confluence} confluences</span>` : ""}
+        <div class="muted">Bias: ${esc(p.bias)}</div>
+        ${p.lot_note ? `<div class="warn">⚠ ${esc(p.lot_note)}</div>` : ""}</div>`;
     });
-    if (!S.new) {
-      const now = r.signal === "BUY" || r.signal === "SELL" ? r.signal : (r.rejected_signal ? r.rejected_signal + " rejected" : "no new entry");
-      html += `<div class="section"><h3>Market right now</h3>${esc(now)}${r.reasons && r.reasons.length ? " — " + esc(r.reasons[0]) : ""}
-        <div class="muted">This doesn't change your setup. Clear it only if you didn't take it.</div>
-        <button class="btn2" id="clearSetup">Clear this setup</button></div>`;
-    }
+    html += `<div class="section"><h3>Why no market entry now</h3><ul>${(r.reasons || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+      <div class="muted">Prices move — tap Get signal again before placing, and cancel the order if the signal changes side.</div></div>`;
   } else {
-    html = `<div class="card"><div class="hero wait"><div class="verdict"><b>No trade</b><span>${esc(r.name || r.symbol)} ${r.price}</span></div>
-      <div class="sub">${sub}</div></div>
-      <div class="section"><h3>Why not</h3><ul>${(r.reasons || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul>
-      ${r.limit_note && !(r.reasons || []).includes(r.limit_note) ? `<div class="muted">${esc(r.limit_note)}</div>` : ""}</div>`;
-  }
-  const T = r.topdown;
-  if (T) {
-    const tdHtml = `<div class="td"><h3><span>Top-down · ${esc(T.stack)}</span><span>${T.passed}/${T.total} ✓</span></h3>
-      ${T.steps.map(x => `<div class="tdrow"><i class="${x.ok ? "y" : "n"}">${x.ok ? "✓" : "✗"}</i><b>${esc(x.tf)}</b>
-        <div>${esc(x.role)}: ${esc(x.dir)}<small>${esc(x.detail)}</small></div></div>`).join("")}</div>`;
-    html = html.replace("</div></div>", "</div></div>" + tdHtml);   // right after the hero
-  }
-  const P = r.previous_setup;
-  if (P && (!S || P.id !== S.id)) {
-    html += `<div class="section"><h3>Last setup</h3>${P.orders.map(o => `${esc(o.side)} ${o.entry} → ${st(o)}`).join("<br>")}
-      <span class="muted"> · ${hhmm(P.created)}</span></div>`;
+    html += `<div class="section"><h3>Why not</h3><ul>${(r.reasons || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+      ${r.limit_note ? `<div class="muted">${esc(r.limit_note)}</div>` : ""}</div>`;
   }
   if (r.warnings && r.warnings.length) {
     html += `<div class="section">${r.warnings.map(w => `<div class="warn">⚠ ${esc(w)}</div>`).join("")}</div>`;
@@ -582,12 +289,6 @@ function render(r) {
     </div></details></div>`;
   $("#out").innerHTML = html;
 
-  const cb = $("#clearSetup");
-  if (cb) cb.onclick = async () => {
-    if (!confirm("Clear this setup? Only do this if you didn't take the trade.")) return;
-    await api(`/api/setup/clear?symbol=${encodeURIComponent(r.symbol)}&tf=${r.interval}`, { method: "POST" });
-    getSignal();
-  };
   document.querySelectorAll(".lv[data-copy]").forEach(el => el.onclick = () => {
     navigator.clipboard && navigator.clipboard.writeText(el.dataset.copy);
     el.classList.add("copied"); setTimeout(() => el.classList.remove("copied"), 1200);
@@ -597,169 +298,6 @@ function render(r) {
 function clock(mins) {
   return new Date(Date.now() + mins * 60000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
-
-// ---------- my trades ----------
-let mtSide = "BUY";
-$("#mtSide").onclick = e => { const b = e.target.closest("button"); if (!b) return; mtSide = b.dataset.v;
-  document.querySelectorAll("#mtSide button").forEach(x => x.classList.toggle("on", x === b)); };
-function paintMtSym() { $("#mtSym").textContent = (BY[state.symbol] || {}).name || state.symbol; }
-$("#mtAdd").onclick = async () => {
-  const body = { symbol: state.symbol, side: mtSide, entry: $("#mtEntry").value, stop_loss: $("#mtSL").value,
-                 take_profit_1: $("#mtTP").value || null, lot: $("#mtLot").value || null };
-  try {
-    const res = await api("/api/trade", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    const d = await res.json(); if (!res.ok) throw new Error(d.detail || "Could not add");
-    $("#mtHint").textContent = "Watching ✓ — you'll get HOLD / WITHDRAW alerts while the scanner runs.";
-    ["#mtEntry", "#mtSL", "#mtTP", "#mtLot"].forEach(id => $(id).value = ""); loadTrades();
-  } catch (e) { $("#mtHint").textContent = e.message; }
-};
-async function loadTrades() {
-  try {
-    const list = await (await api("/api/trades")).json();
-    $("#mtList").innerHTML = list.map(t => { const o = t.orders[0], a = o.advice || {};
-      return `<div class="feed"><div class="item"><b>${esc((BY[t.symbol] || {}).name || t.symbol)} ${o.side} @ ${o.entry}</b>
-        <span class="muted"> · SL ${o.stop_loss} · TP ${o.take_profit_1}</span>
-        <div class="advice ${String(a.verdict || "").startsWith("HOLD") ? "ok" : a.verdict ? "bad" : ""}">${esc(a.verdict || o.status)}
-          ${a.progress !== undefined ? `<span class="muted" style="font-weight:500"> ${a.progress >= 0 ? "+" : ""}${a.progress}R</span>` : ""}</div>
-        ${(a.warnings || []).map(w => `<div class="warn">⚠ ${esc(w)}</div>`).join("")}
-        <button class="btn2" data-rm="${esc(t.symbol)}">I closed it — stop watching</button></div></div>`; }).join("");
-    document.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => {
-      await api("/api/trade?symbol=" + encodeURIComponent(b.dataset.rm), { method: "DELETE" }); loadTrades(); });
-  } catch {}
-}
-
-// ---------- tabs ----------
-document.querySelector(".tabs").onclick = e => { const b = e.target.closest("button"); if (!b) return;
-  document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
-  $("#tab-signal").classList.toggle("hidden", b.dataset.t !== "signal");
-  $("#tab-scanner").classList.toggle("hidden", b.dataset.t !== "scanner");
-  $("#tab-journal").classList.toggle("hidden", b.dataset.t !== "journal");
-  if (b.dataset.t === "scanner") loadScanner();
-  if (b.dataset.t === "journal") loadJournal();
-};
-
-// ---------- scanner ----------
-let SC = null, scTimer = null, watchSel = new Set(), seenAlert = store.get("seenAlert", 0);
-const ago = t => { if (!t) return "never"; const s = Math.round(Date.now() / 1000 - t);
-  return s < 60 ? s + "s ago" : s < 3600 ? Math.round(s / 60) + " min ago" : Math.round(s / 3600) + " h ago"; };
-const hhmm = t => new Date(t * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-
-async function loadScanner() {
-  clearInterval(scTimer); scTimer = setInterval(() => !$("#tab-scanner").classList.contains("hidden") && refreshScanner(), 30000);
-  await refreshScanner(true);
-}
-async function refreshScanner(fillForm = false) {
-  try {
-    const res = await api("/api/scanner"); SC = await res.json();
-    if (!res.ok) throw new Error(SC.detail || "Error");
-  } catch (e) { $("#scStatus").textContent = e.message; return; }
-  const st = SC.settings, cr = SC.credits;
-  if (st.mode && st.mode !== state.mode) { state.mode = st.mode; store.set("mode", state.mode); paint(); }
-  const g = SC.latest["XAU/USD"];
-  if (g && g.price) { if (base["XAU/USD"] == null) base["XAU/USD"] = g.price; if (raw["XAU/USD"] == null) setTicker(g.price, g.bias, null, g.checklist); }
-  $("#scEnabled").checked = st.enabled;
-  const fresh = SC.last_scan && Date.now() / 1000 - SC.last_scan < 180;
-  $("#scStatus").innerHTML = !st.enabled ? '<span class="bad">Off</span>'
-    : fresh ? '<span class="ok">Running</span>' : '<span class="bad">Waiting for the every-minute scan link</span>';
-  $("#scLast").textContent = ago(SC.last_scan);
-  $("#scChannels").innerHTML = SC.channels.length ? `<span class="ok">${SC.channels.join(" + ")}</span>` : '<span class="bad">Not set up</span>';
-  $("#scCredits").textContent = cr.per_day ? `${cr.used_today} / ${cr.per_day}` : `${cr.used_today} (no daily cap)`;
-  $("#scNote").textContent = [SC.live ? "" : "DEMO data — alerts are not sent to your phone.", SC.note,
-                              ...(SC.notify_errors || [])].filter(Boolean).join(" ");
-  // alerts
-  $("#scAlerts").innerHTML = SC.alerts.length ? SC.alerts.map(a => `<div class="item"><b>${esc(a.title)}</b>
-      <span class="muted"> · ${hhmm(a.time)}${a.sent ? " · sent ✓" : a.demo ? " · demo" : " · not sent"}</span>
-      <pre>${esc(a.body)}</pre></div>`).join("") : '<div class="muted">No alerts yet. They appear here and on your phone.</div>';
-  const newest = SC.alerts[0] ? SC.alerts[0].time : 0;
-  $("#scanDot").classList.toggle("hidden", !(newest > seenAlert));
-  if (!$("#tab-scanner").classList.contains("hidden")) { seenAlert = newest; store.set("seenAlert", newest); $("#scanDot").classList.add("hidden"); }
-  // latest per market
-  const rows = Object.values(SC.latest).sort((a, b) => (b.symbol === "XAU/USD") - (a.symbol === "XAU/USD") || (b.score || 0) - (a.score || 0));
-  $("#scLatest").innerHTML = rows.length ? rows.map(r => {
-    const name = (BY[r.symbol] || {}).name || r.symbol;
-    const what = r.error ? `<span class="bad">error</span>` : r.setup
-      ? `<b class="${r.setup.side.startsWith("BUY") ? "ok" : "bad"}">${esc(r.setup.side)}</b> <span class="muted">${r.setup.entry} · ${esc(r.setup.status.toLowerCase())}</span>`
-      : r.signal === "NO TRADE"
-      ? (r.limit ? `<span class="muted">${r.limit.side.toLowerCase()} ${r.limit.entry}</span>` : '<span class="muted">no trade</span>')
-      : `<b class="${r.signal === "BUY" ? "ok" : "bad"}">${r.signal}</b><span class="grade ${r.grade === "A+" ? "Ap" : r.grade}" style="vertical-align:0">${r.grade}</span>`;
-    return `<div class="row3"><div>${r.symbol === "XAU/USD" ? '<span class="star" style="color:#f2b544">★</span> ' : ""}${esc(name)}
-      <span class="muted" style="font-size:11px">${(r.interval || "").replace("min", "m")}</span>
-      ${r.checklist ? `<div class="muted" style="font-size:11px">${esc(r.checklist)}</div>` : ""}</div><div>${what}</div>
-      <div class="muted" style="text-align:right">${ago(r.time)}</div></div>`; }).join("") : '<div class="muted">Nothing scanned yet.</div>';
-  $("#scProblems").innerHTML = SC.problems.length ? SC.problems.map(p => `<div>⚠ ${esc(p)}</div>`).join("")
-    : '<div class="ok" style="color:var(--buy)">✓ Everything is set up. Alerts come only when the top-down passes — quiet days are normal.</div>';
-  if (fillForm) fillScannerForm();
-  budget();
-}
-function fillScannerForm() {
-  const st = SC.settings;
-  $("#scGoldTf").value = st.gold_tf; $("#scOtherTf").value = st.other_tf;
-  $("#scGoldGrade").value = st.gold_grade; $("#scOtherGrade").value = st.other_grade;
-  $("#scLimit").checked = st.limit_alerts;
-  $("#scGoldUpd").checked = st.gold_updates; $("#scGoldBias").checked = st.gold_bias_alerts;
-  $("#scGoldLimit").checked = st.gold_limit_alerts; $("#scHello").checked = st.morning_hello; $("#scGoldHourly").checked = st.gold_hourly;
-  watchSel = new Set(st.watch);
-  $("#scWatch").innerHTML = CATS.map(c => {
-    const ms = MARKETS.filter(m => m.category === c);
-    return `<div class="wl-cat">${c}</div><div class="wl">${ms.map(m => `<label class="${m.locked ? "locked" : ""}${watchSel.has(m.symbol) ? " on" : ""}" data-v="${m.symbol}">
-      <input type="checkbox" ${watchSel.has(m.symbol) ? "checked" : ""} ${m.locked ? "disabled" : ""}>${m.symbol === "XAU/USD" ? "★ " : ""}${esc(m.name)}${m.locked ? " 🔒" : ""}</label>`).join("")}</div>`;
-  }).join("");
-}
-$("#scWatch").onclick = e => { const l = e.target.closest("label"); if (!l || l.classList.contains("locked")) return;
-  e.preventDefault(); const v = l.dataset.v;
-  watchSel.has(v) ? watchSel.delete(v) : watchSel.add(v); l.classList.toggle("on", watchSel.has(v)); budget(); };
-["#scGoldTf", "#scOtherTf"].forEach(id => $(id).onchange = budget);
-
-// same maths as the server: candles checked per day + higher-timeframe refreshes
-function costPerDay(sym, tf, win) {
-  const gold = sym === "XAU/USD";
-  return SC.stacks[tf].reduce((t, f) => {
-    let m = f === tf ? SC.tf_minutes[tf] : SC.refresh[f];
-    if (!gold && f !== tf && !["15min", "5min", "1min"].includes(f)) m = Math.max(m, 60);
-    return t + win / m; }, 0);
-}
-function budget() {
-  if (!SC) return;
-  const st = SC.settings, win = (st.end_hour - st.start_hour) * 60;
-  let total = 0, n = 0;
-  watchSel.forEach(sym => { if (!BY[sym] || BY[sym].locked) return; n++;
-    const tf = sym === "XAU/USD" ? $("#scGoldTf").value : $("#scOtherTf").value;
-    total += costPerDay(sym, tf, win); });
-  total = Math.round(total);
-  const cap = SC.estimate.budget;
-  const pct = cap ? Math.min(100, total / cap * 100) : 30;
-  $("#scMeter").style.width = pct + "%"; $("#scMeter").className = cap && total > cap ? "over" : "";
-  $("#scBudget").innerHTML = cap
-    ? (total > cap ? `<span class="bad">${n} markets need ~${total} of ${cap} daily data. Too much — choose fewer markets or slower checks. Gold is always kept.</span>`
-                   : `${n} markets use ~${total} of ${cap} daily data (100 more kept for your own taps).`)
-    : `${n} markets · ~${total} requests a day (paid plan, no daily cap).`;
-}
-$("#scSave").onclick = async () => {
-  const body = { watch: [...watchSel], gold_tf: $("#scGoldTf").value, other_tf: $("#scOtherTf").value,
-    gold_grade: $("#scGoldGrade").value, other_grade: $("#scOtherGrade").value, limit_alerts: $("#scLimit").checked,
-    gold_updates: $("#scGoldUpd").checked, gold_bias_alerts: $("#scGoldBias").checked,
-    gold_limit_alerts: $("#scGoldLimit").checked, morning_hello: $("#scHello").checked, gold_hourly: $("#scGoldHourly").checked,
-    balance: state.balance, risk: state.risk, cent: state.cent, enabled: $("#scEnabled").checked };
-  try {
-    const res = await api("/api/scanner/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    if (!res.ok) throw new Error("Could not save");
-    $("#scSaved").textContent = "Saved ✓ (uses your balance $" + state.balance + " and risk " + state.risk + "% from the Signal tab)";
-    refreshScanner(true);
-  } catch (e) { $("#scSaved").textContent = e.message; }
-};
-$("#scEnabled").onchange = async e => {
-  await api("/api/scanner/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled: e.target.checked }) });
-  refreshScanner();
-};
-$("#scTest").onclick = async () => {
-  const b = $("#scTest"); b.textContent = "Sending…";
-  try { const d = await (await api("/api/notify/test", { method: "POST" })).json();
-        b.textContent = d.ok ? "Sent ✓ — check your phone" : "Failed: " + d.errors.join(" "); }
-  catch (e) { b.textContent = e.message; }
-  setTimeout(() => b.textContent = "Send test notification", 6000);
-};
-// check for new alerts in the background so the Scanner tab shows a dot
-setInterval(() => document.visibilityState === "visible" && $("#tab-scanner").classList.contains("hidden") && refreshScanner(), 60000);
 
 // ---------- alert when a trade appears ----------
 function alertTrade() {
@@ -772,227 +310,6 @@ function alertTrade() {
       o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + .16); });
   } catch {}
 }
-
-// ---------- LIVE: price every second (free Binance stream), analysis every candle close ----------
-// Gold uses PAXG (a token backed 1:1 by gold) and crypto uses its own pair. The small gap to the
-// Twelve Data price is measured at every analysis and removed, so live prices line up with your chart.
-const STREAMS = { "XAU/USD": "paxgusdt", "BTC/USD": "btcusdt", "ETH/USD": "ethusdt", "SOL/USD": "solusdt",
-  "XRP/USD": "xrpusdt", "LTC/USD": "ltcusdt", "DOGE/USD": "dogeusdt", "EUR/USD": "eurusdt" };
-const WS_HOSTS = ["wss://data-stream.binance.vision", "wss://stream.binance.com:9443"];
-let ws = null, wsHost = 0, wsWanted = false, raw = {}, offset = {}, base = {}, liveTimer = null;
-const TFMIN2 = { "1min": 1, "5min": 5, "15min": 15, "1h": 60 };
-
-function scheduleCandleRefresh() {
-  clearTimeout(watchTimer);
-  if (!$("#watch").checked) return;
-  const secs = TFMIN2[state.tf] * 60, now = Date.now() / 1000;
-  const wait = (Math.floor(now / secs) + 1) * secs - now + 4;      // 4 s after the candle closes
-  watchTimer = setTimeout(async () => { await getSignal(true); scheduleCandleRefresh(); }, wait * 1000);
-}
-function liveSymbols() { return [...new Set(["XAU/USD", state.symbol])].filter(x => STREAMS[x]); }
-function startLive() {
-  wsWanted = true;
-  const syms = liveSymbols();
-  if (ws) { try { ws.onclose = null; ws.close(); } catch {} ws = null; }
-  if (!syms.length) { liveStatus("No live stream for this market — it re-checks at every candle close."); return; }
-  const url = `${WS_HOSTS[wsHost]}/stream?streams=` + syms.map(x => STREAMS[x] + "@bookTicker").join("/");
-  try { ws = new WebSocket(url); } catch { ws = null; }
-  if (!ws) return;
-  ws.onmessage = ev => { try {
-      const m = JSON.parse(ev.data), d = m.data || m;
-      const sym = Object.keys(STREAMS).find(k => STREAMS[k] + "@bookticker" === String(m.stream).toLowerCase());
-      if (sym && d.b && d.a) {
-        raw[sym] = (parseFloat(d.b) + parseFloat(d.a)) / 2;
-        if (offset[sym] === undefined && base[sym] != null) offset[sym] = base[sym] - raw[sym];   // first tick: line up with the chart
-      }
-    } catch {} };
-  ws.onopen = () => liveStatus("");
-  ws.onclose = () => { ws = null; if (!wsWanted) return;
-    wsHost = (wsHost + 1) % WS_HOSTS.length;                        // try the other host, then retry
-    liveStatus("Live price reconnecting…"); setTimeout(() => wsWanted && startLive(), 3000); };
-  clearInterval(liveTimer); liveTimer = setInterval(paintLive, 1000);
-}
-function stopLive() { wsWanted = false; clearInterval(liveTimer); if (ws) { try { ws.onclose = null; ws.close(); } catch {} ws = null; } liveStatus(""); }
-function liveStatus(t) { const h = $("#liveNote"); if (h) h.textContent = t; }
-function livePrice(sym) { return raw[sym] == null ? null : raw[sym] + (offset[sym] || 0); }
-function calibrate(r) { base[r.symbol] = r.price; if (raw[r.symbol] != null) offset[r.symbol] = r.price - raw[r.symbol]; }
-
-function paintLive() {
-  const dg = p => digitsFor(p);
-  const g = livePrice("XAU/USD");
-  if (g != null) $("#tkPrice").textContent = g.toFixed(2);
-  const p = livePrice(state.symbol);
-  if (p == null || !lastR || lastR.symbol !== state.symbol) return;
-  const f = x => Number(x).toFixed(dg(p));
-  $("#chSub").innerHTML = `<b style="color:var(--text)">${f(p)}</b> <span style="color:var(--buy)">● live</span>`;
-  const hv = document.querySelector(".verdict span"); if (hv) hv.textContent = `${lastR.name || lastR.symbol} ${f(p)}`;
-  // grow the last candle on the chart
-  if (CS && lastR.chart && lastR.chart[chartTf]) {
-    const data = lastR.chart[chartTf], secs = { "1day": 86400, "4h": 14400, "1h": 3600, "15min": 900, "5min": 300, "1min": 60 }[chartTf];
-    const last = data[data.length - 1], bucket = Math.floor(Date.now() / 1000 / secs) * secs;
-    if (bucket > last[0]) data.push([bucket, last[4], Math.max(last[4], p), Math.min(last[4], p), p]);
-    else { last[2] = Math.max(last[2], p); last[3] = Math.min(last[3], p); last[4] = p; }
-    const c = data[data.length - 1];
-    try { CS.update({ time: c[0], open: c[1], high: c[2], low: c[3], close: c[4] }); } catch {}
-  }
-  // live progress of the open setup
-  const S = lastR.setup, box = $("#liveTrade");
-  if (S && box) {
-    const o = S.orders.find(x => ["WAITING", "FILLED", "IN TRADE"].includes(x.status));
-    if (o) {
-      const d = o.side.startsWith("BUY") ? 1 : -1, risk = Math.abs(o.entry - o.stop_loss) || 1e-9;
-      if (o.status === "WAITING") {
-        box.innerHTML = `Live <b>${f(p)}</b> · ${f(Math.abs(p - o.entry))} away from your limit at ${o.entry}`;
-      } else {
-        const R = (p - o.entry) * d / risk;
-        const col = R >= 0 ? "var(--buy)" : "var(--sell)";
-        box.innerHTML = `Live <b>${f(p)}</b> · <b style="color:${col}">${R >= 0 ? "+" : ""}${R.toFixed(2)}R</b>
-          · ${f(Math.abs(o.take_profit_1 - p))} to TP1 · ${f(Math.abs(p - o.stop_loss))} to SL
-          ${R >= 1 ? ' · <b style="color:var(--wait)">move SL to breakeven</b>' : ""}`;
-      }
-    } else box.innerHTML = "";
-  }
-}
-
-// ---------- Gold ticker ----------
-function setTicker(price, bias, td, checklist) {
-  $("#tkPrice").textContent = price;
-  const b = String(bias || "").toLowerCase();
-  const el = $("#tkBias"); el.textContent = b ? b : "bias —";
-  el.className = "pill2" + (b === "bullish" ? " bull" : b === "bearish" ? " bear" : "");
-  $("#tkTd").textContent = td ? `${td.passed}/${td.total} ✓` : checklist ? (checklist.match(/✓/g) || []).length + "/" + (checklist.split("·").length) + " ✓" : "";
-}
-
-// ---------- chart ----------
-const LOCALE = (() => { try { const l = navigator.language || "en-US"; new Intl.NumberFormat(l); return l; } catch { return "en-US"; } })();
-const TF_ORDER = ["1day", "4h", "1h", "15min", "5min", "1min"];
-const TF_LABEL = { "1day": "D", "4h": "4H", "1h": "1H", "15min": "15m", "5min": "5m", "1min": "1m" };
-let CH = null, CS = null, chartLines = [], chartTf = store.get("chartTf", null), lastR = null;
-const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-function digitsFor(p) { return p < 10 ? 5 : p < 200 ? 3 : 2; }
-function drawChart(r) {
-  lastR = r;
-  if (!r.chart) return;
-  if (!window.LightweightCharts) { $("#chart").innerHTML = '<div class="chart-empty">Chart library could not load.</div>'; return; }
-  const tfs = TF_ORDER.filter(t => r.chart[t]);
-  if (!tfs.includes(chartTf)) chartTf = r.interval;
-  $("#chartTfs").innerHTML = tfs.map(t => `<button data-v="${t}" class="${t === chartTf ? "on" : ""}">${TF_LABEL[t]}</button>`).join("");
-  $("#chTitle").textContent = `${r.name || r.symbol} · ${TF_LABEL[chartTf]}`;
-  $("#chSub").textContent = r.price;
-  if (!CH) {
-    $("#chart").innerHTML = "";
-    CH = LightweightCharts.createChart($("#chart"), {
-      autoSize: true,
-      layout: { background: { color: "transparent" }, textColor: cssv("--muted"), fontFamily: "Inter, sans-serif" },
-      grid: { vertLines: { color: "rgba(36,48,64,.5)" }, horzLines: { color: "rgba(36,48,64,.5)" } },
-      rightPriceScale: { borderColor: cssv("--line") },
-      timeScale: { borderColor: cssv("--line"), timeVisible: true, secondsVisible: false,
-        tickMarkFormatter: (t, type) => { const d = new Date(t * 1000);
-          return type < 3 ? d.toLocaleDateString([], { day: "numeric", month: "short" }) : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); } },
-      localization: { locale: LOCALE, timeFormatter: t => new Date(t * 1000).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) },
-      crosshair: { mode: 0 },
-    });
-    CS = CH.addCandlestickSeries({ upColor: cssv("--buy"), downColor: cssv("--sell"), borderVisible: false,
-      wickUpColor: cssv("--buy"), wickDownColor: cssv("--sell") });
-  }
-  const dg = digitsFor(r.price);
-  CS.applyOptions({ priceFormat: { type: "price", precision: dg, minMove: Math.pow(10, -dg) } });
-  CS.setData(r.chart[chartTf].map(c => ({ time: c[0], open: c[1], high: c[2], low: c[3], close: c[4] })));
-  chartLines.forEach(l => CS.removePriceLine(l)); chartLines = [];
-  const LS = LightweightCharts.LineStyle;
-  const line = (price, color, title, style = LS.Solid, width = 2) => price != null && chartLines.push(
-    CS.createPriceLine({ price: Number(price), color, lineWidth: width, lineStyle: style, axisLabelVisible: true, title }));
-  const S = r.setup;
-  const orders = S ? S.orders.filter(o => ["WAITING", "FILLED", "IN TRADE"].includes(o.status)) : (r.limit_orders || []);
-  orders.forEach(o => {
-    const side = (o.side || "").split(" ")[0];
-    line(o.entry, cssv("--accent"), `${side} ${o.kind === "limit" || /LIMIT/.test(o.side) ? "limit" : "entry"}`);
-    line(o.stop_loss, cssv("--sell"), "SL");
-    line(o.take_profit_1, cssv("--buy"), "TP1");
-    line(o.take_profit_2, cssv("--buy"), "TP2", LS.Dashed, 1);
-  });
-  const rg = (r.topdown || {}).range;
-  if (rg) {
-    line(rg.high, cssv("--faint"), `${rg.tf} high`, LS.Dotted, 1);
-    line(rg.low, cssv("--faint"), `${rg.tf} low`, LS.Dotted, 1);
-    const b = (r.topdown || {}).bias;
-    if (b === "Bullish" || b === "Bearish") line(rg.limit, cssv("--wait"), b === "Bullish" ? "buy below" : "sell above", LS.Dashed, 1);
-  }
-  const markers = [];
-  if (S) {
-    const data = r.chart[chartTf]; let t = data[0][0];
-    for (const c of data) { if (c[0] <= S.created) t = c[0]; }
-    const buy = S.orders[0].side.startsWith("BUY");
-    markers.push({ time: t, position: buy ? "belowBar" : "aboveBar", color: buy ? cssv("--buy") : cssv("--sell"),
-      shape: buy ? "arrowUp" : "arrowDown", text: S.orders[0].side });
-  }
-  CS.setMarkers(markers);
-  CH.timeScale().fitContent();
-}
-$("#chartTfs").onclick = e => { const b = e.target.closest("button"); if (!b || !lastR) return;
-  chartTf = b.dataset.v; store.set("chartTf", chartTf); drawChart(lastR); };
-
-// ---------- journal ----------
-let JR = null, jrDays = 0, JC = null, JS = null;
-$("#jrDays").onclick = e => { const b = e.target.closest("button"); if (!b) return; jrDays = +b.dataset.v;
-  document.querySelectorAll("#jrDays button").forEach(x => x.classList.toggle("on", x === b)); loadJournal(); };
-$("#jrSym").onchange = () => loadJournal();
-async function loadJournal() {
-  if ($("#jrSym").options.length === 1 && MARKETS.length)
-    $("#jrSym").innerHTML += MARKETS.filter(m => !m.locked).map(m => `<option value="${m.symbol}">${esc(m.name)}</option>`).join("");
-  try {
-    const q = new URLSearchParams({ symbol: $("#jrSym").value, days: jrDays });
-    JR = await (await api("/api/journal?" + q)).json();
-  } catch (e) { $("#jrNote").textContent = e.message; return; }
-  const s = JR.stats;
-  const tile = (k, v, x = "", cls = "") => `<div class="tile"><div class="k">${k}</div><div class="v ${cls}">${v}</div><div class="x">${x}</div></div>`;
-  $("#jrTiles").innerHTML =
-    tile("Trades", s.trades, `${s.wins} won · ${s.losses} lost`) +
-    tile("Win rate", s.win_rate == null ? "—" : s.win_rate + "%", "break-even 33%", s.win_rate == null ? "" : s.win_rate >= 34 ? "ok" : "bad") +
-    tile("Total", (s.total_r >= 0 ? "+" : "") + s.total_r + "R", "R = times your risk", s.total_r >= 0 ? "ok" : "bad") +
-    tile("Profit", (s.pnl >= 0 ? "+$" : "−$") + Math.abs(s.pnl).toFixed(2), "at the lot sizes given", s.pnl >= 0 ? "ok" : "bad") +
-    tile("Per trade", s.expectancy == null ? "—" : (s.expectancy >= 0 ? "+" : "") + s.expectancy + "R", "average") +
-    tile("Streak", s.streak || "—", "W = wins, L = losses");
-  $("#jrNote").textContent = s.storage === "file"
-    ? "Saved on the server until the next redeploy. Add DATABASE_URL on Render to keep results permanently (see DEPLOY.md)."
-    : "Saved permanently in your database.";
-  // equity curve
-  if (s.curve.length && window.LightweightCharts) {
-    if (!JC) { $("#jrCurve").innerHTML = "";
-      JC = LightweightCharts.createChart($("#jrCurve"), { autoSize: true,
-        layout: { background: { color: "transparent" }, textColor: cssv("--muted") },
-        grid: { vertLines: { visible: false }, horzLines: { color: "rgba(36,48,64,.5)" } },
-        localization: { locale: LOCALE },
-        rightPriceScale: { borderColor: cssv("--line") }, timeScale: { borderColor: cssv("--line"), timeVisible: true } });
-      JS = JC.addBaselineSeries({ baseValue: { type: "price", price: 0 }, topLineColor: cssv("--buy"), bottomLineColor: cssv("--sell"),
-        topFillColor1: "rgba(31,199,126,.25)", topFillColor2: "rgba(31,199,126,.02)",
-        bottomFillColor1: "rgba(255,84,104,.02)", bottomFillColor2: "rgba(255,84,104,.25)" }); }
-    let last = 0;
-    JS.setData(s.curve.map(p => { const t = Math.max(p.t, last + 1); last = t; return { time: t, value: p.r }; }));
-    JC.timeScale().fitContent();
-  } else if (!s.curve.length) { if (JC) { JC.remove(); JC = null; } $("#jrCurve").innerHTML = '<div class="chart-empty" style="height:200px">No finished trades yet</div>'; }
-  // by market
-  const bs = Object.entries(s.by_symbol);
-  $("#jrBySym").innerHTML = bs.length ? bs.map(([sym, b]) => `<div class="jrow"><div>${esc((BY[sym] || {}).name || sym)}</div>
-      <div>${b.trades} trades</div><div>${Math.round(100 * b.wins / b.trades)}% won</div>
-      <div class="${b.r >= 0 ? "ok" : "bad"}">${b.r >= 0 ? "+" : ""}${b.r}R</div></div>`).join("") : '<div class="muted">No finished trades yet.</div>';
-  const nt = Object.entries(s.not_taken);
-  $("#jrNot").innerHTML = nt.length ? nt.map(([k, n]) => `<div class="stat">${esc(k.toLowerCase())} <b>${n}</b></div>`).join("")
-    : '<div class="muted">None.</div>';
-  // trade list
-  const ST2 = { "TP1 HIT": "st-win", "STOPPED": "st-loss" };
-  $("#jrList").innerHTML = JR.trades.length ? JR.trades.slice(0, 60).map(t => `<div class="jrow">
-      <div><b>${esc((BY[t.symbol] || {}).name || t.symbol)}</b> ${esc(t.side)}<small>${t.tf === "manual" ? "your trade" : t.tf.replace("min", "m")} · ${t.kind}${t.grade ? " · " + t.grade : ""}</small></div>
-      <div>${t.entry}<small>SL ${t.stop_loss}</small></div>
-      <div><span class="st ${ST2[t.status] || "st-off"}">${esc(t.status.toLowerCase())}</span></div>
-      <div class="${t.r > 0 ? "ok" : t.r < 0 ? "bad" : "muted"}" style="text-align:right">${t.taken ? (t.r > 0 ? "+" : "") + t.r + "R" : "—"}
-        <small>${t.closed_at ? new Date(t.closed_at * 1000).toLocaleDateString([], { day: "numeric", month: "short" }) + " " + hhmm(t.closed_at) : ""}</small></div>
-    </div>`).join("") : '<div class="muted">No trades yet. Every setup the site gives is recorded here when it finishes.</div>';
-}
-$("#jrReset").onclick = async () => {
-  if (!confirm("Delete all journal results? This cannot be undone.")) return;
-  await api("/api/journal", { method: "DELETE" }); loadJournal();
-};
 </script>
 </body>
 </html>
