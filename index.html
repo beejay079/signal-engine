@@ -264,10 +264,11 @@
       <div class="field" style="margin-bottom:12px"><span>$</span><input id="balance" inputmode="decimal" value="100"></div>
       <div class="toggles">
         <label><input type="checkbox" id="cent"> Cent account</label>
-        <label><input type="checkbox" id="watch"> Auto-refresh 30s</label>
+        <label><input type="checkbox" id="watch"> Live (1s)</label>
       </div>
       <button class="go" id="go">Get signal</button>
       <p class="hint" id="hint"></p>
+      <p class="hint" id="liveNote"></p>
     </div>
 
     <div class="card chartcard a-chart">
@@ -428,7 +429,8 @@ $("#mkts").onclick = e => { const b = e.target.closest(".mk"); if (!b) return;
   const m = BY[b.dataset.v];
   if (m.locked) { $("#hint").textContent = `${m.name} needs the Twelve Data ${m.plan[0].toUpperCase() + m.plan.slice(1)} plan (set DATA_PLAN on Render after upgrading).`; return; }
   $("#hint").textContent = "";
-  state.symbol = m.symbol; store.set("symbol", state.symbol); paint(); lastSignal = null; getSignal(); };
+  state.symbol = m.symbol; store.set("symbol", state.symbol); paint(); lastSignal = null; getSignal();
+  if ($("#watch").checked) { startLive(); scheduleCandleRefresh(); } };
 
 // ---------- controls ----------
 function paint() {
@@ -441,7 +443,7 @@ function paint() {
   $("#balance").value = state.balance; $("#risk").value = state.risk; $("#cent").checked = state.cent;
 }
 $("#tf").onclick = e => { const b = e.target.closest("button"); if (!b) return;
-  state.tf = b.dataset.v; store.set("tf", state.tf); paint(); };
+  state.tf = b.dataset.v; store.set("tf", state.tf); paint(); scheduleCandleRefresh(); };
 $("#balance").onchange = e => { state.balance = parseFloat(e.target.value) || 100; store.set("balance", state.balance); };
 $("#risk").onchange = e => { state.risk = parseFloat(e.target.value) || 2; store.set("risk", state.risk); };
 $("#cent").onchange = e => { state.cent = e.target.checked; store.set("cent", state.cent); };
@@ -457,12 +459,16 @@ $("#modeSeg").onclick = async e => { const b = e.target.closest("button"); if (!
   getSignal(); };
 $("#ticker").onclick = () => { state.cat = "Metals"; state.symbol = "XAU/USD"; store.set("cat", state.cat); store.set("symbol", state.symbol);
   document.querySelector(".tabs button[data-t='signal']").click(); paint(); getSignal(); };
+$("#watch").checked = store.get("live", false);
 $("#watch").onchange = e => {
-  clearInterval(watchTimer);
-  if (e.target.checked) { getSignal(); watchTimer = setInterval(() => getSignal(true), 30000); }
+  store.set("live", e.target.checked);
+  clearTimeout(watchTimer);
+  if (e.target.checked) { getSignal(); scheduleCandleRefresh(); startLive(); } else { stopLive(); }
+  $("#hint").textContent = e.target.checked ? "Live: price every second · full top-down re-check at every candle close." : "";
+  return;
   $("#hint").textContent = e.target.checked ? "Watching… you'll get a beep when a trade appears." : "";
 };
-loadMarkets().then(() => { loadTrades(); refreshScanner(); setInterval(() => document.visibilityState === "visible" && loadTrades(), 60000); });
+loadMarkets().then(() => { loadTrades(); refreshScanner(); if ($("#watch").checked) $("#watch").onchange({ target: $("#watch") }); setInterval(() => document.visibilityState === "visible" && loadTrades(), 60000); });
 
 // ---------- fetch ----------
 async function getSignal(silent = false) {
@@ -478,6 +484,7 @@ async function getSignal(silent = false) {
     if (!res.ok) throw new Error(data.error || data.detail || "Something went wrong");
     render(data);
     drawChart(data);
+    calibrate(data);
     if (data.symbol === "XAU/USD") setTicker(data.price, (data.topdown || {}).bias, data.topdown);
     if (data.setup && data.setup.new && lastSignal !== data.setup.id) alertTrade();
     lastSignal = data.setup ? data.setup.id : null;
@@ -518,7 +525,8 @@ function render(r) {
                 : main.kind === "market" ? `${main.side} ${S.new ? "now" : "— in trade"}` : main.side.replace("LIMIT", "limit");
     html = `<div class="card"><div class="hero ${buy ? "buy" : "sell"}${main.kind === "limit" ? " pending" : ""}">
       <div class="verdict"><b>${title}${gradeTag(S.grade)}</b><span>${esc(r.name || r.symbol)} ${r.price}</span></div>
-      <div class="sub">${S.new ? "New setup" : `🔒 Locked since ${hhmm(S.created)} — levels stay fixed until it finishes`}<br>${sub}</div></div>`;
+      <div class="sub">${S.new ? "New setup" : `🔒 Locked since ${hhmm(S.created)} — levels stay fixed until it finishes`}<br>${sub}</div>
+      <div class="sub" id="liveTrade"></div></div>`;
     os.forEach(o => {
       const b = o.side.startsWith("BUY");
       const dist = Math.abs(r.price - o.entry);
@@ -648,7 +656,7 @@ async function refreshScanner(fillForm = false) {
   const st = SC.settings, cr = SC.credits;
   if (st.mode && st.mode !== state.mode) { state.mode = st.mode; store.set("mode", state.mode); paint(); }
   const g = SC.latest["XAU/USD"];
-  if (g && g.price) setTicker(g.price, g.bias, null, g.checklist);
+  if (g && g.price) { if (base["XAU/USD"] == null) base["XAU/USD"] = g.price; if (raw["XAU/USD"] == null) setTicker(g.price, g.bias, null, g.checklist); }
   $("#scEnabled").checked = st.enabled;
   const fresh = SC.last_scan && Date.now() / 1000 - SC.last_scan < 180;
   $("#scStatus").innerHTML = !st.enabled ? '<span class="bad">Off</span>'
@@ -763,6 +771,87 @@ function alertTrade() {
       g.gain.setValueAtTime(.15, ctx.currentTime + t); g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + t + .15);
       o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + .16); });
   } catch {}
+}
+
+// ---------- LIVE: price every second (free Binance stream), analysis every candle close ----------
+// Gold uses PAXG (a token backed 1:1 by gold) and crypto uses its own pair. The small gap to the
+// Twelve Data price is measured at every analysis and removed, so live prices line up with your chart.
+const STREAMS = { "XAU/USD": "paxgusdt", "BTC/USD": "btcusdt", "ETH/USD": "ethusdt", "SOL/USD": "solusdt",
+  "XRP/USD": "xrpusdt", "LTC/USD": "ltcusdt", "DOGE/USD": "dogeusdt", "EUR/USD": "eurusdt" };
+const WS_HOSTS = ["wss://data-stream.binance.vision", "wss://stream.binance.com:9443"];
+let ws = null, wsHost = 0, wsWanted = false, raw = {}, offset = {}, base = {}, liveTimer = null;
+const TFMIN2 = { "1min": 1, "5min": 5, "15min": 15, "1h": 60 };
+
+function scheduleCandleRefresh() {
+  clearTimeout(watchTimer);
+  if (!$("#watch").checked) return;
+  const secs = TFMIN2[state.tf] * 60, now = Date.now() / 1000;
+  const wait = (Math.floor(now / secs) + 1) * secs - now + 4;      // 4 s after the candle closes
+  watchTimer = setTimeout(async () => { await getSignal(true); scheduleCandleRefresh(); }, wait * 1000);
+}
+function liveSymbols() { return [...new Set(["XAU/USD", state.symbol])].filter(x => STREAMS[x]); }
+function startLive() {
+  wsWanted = true;
+  const syms = liveSymbols();
+  if (ws) { try { ws.onclose = null; ws.close(); } catch {} ws = null; }
+  if (!syms.length) { liveStatus("No live stream for this market — it re-checks at every candle close."); return; }
+  const url = `${WS_HOSTS[wsHost]}/stream?streams=` + syms.map(x => STREAMS[x] + "@bookTicker").join("/");
+  try { ws = new WebSocket(url); } catch { ws = null; }
+  if (!ws) return;
+  ws.onmessage = ev => { try {
+      const m = JSON.parse(ev.data), d = m.data || m;
+      const sym = Object.keys(STREAMS).find(k => STREAMS[k] + "@bookticker" === String(m.stream).toLowerCase());
+      if (sym && d.b && d.a) {
+        raw[sym] = (parseFloat(d.b) + parseFloat(d.a)) / 2;
+        if (offset[sym] === undefined && base[sym] != null) offset[sym] = base[sym] - raw[sym];   // first tick: line up with the chart
+      }
+    } catch {} };
+  ws.onopen = () => liveStatus("");
+  ws.onclose = () => { ws = null; if (!wsWanted) return;
+    wsHost = (wsHost + 1) % WS_HOSTS.length;                        // try the other host, then retry
+    liveStatus("Live price reconnecting…"); setTimeout(() => wsWanted && startLive(), 3000); };
+  clearInterval(liveTimer); liveTimer = setInterval(paintLive, 1000);
+}
+function stopLive() { wsWanted = false; clearInterval(liveTimer); if (ws) { try { ws.onclose = null; ws.close(); } catch {} ws = null; } liveStatus(""); }
+function liveStatus(t) { const h = $("#liveNote"); if (h) h.textContent = t; }
+function livePrice(sym) { return raw[sym] == null ? null : raw[sym] + (offset[sym] || 0); }
+function calibrate(r) { base[r.symbol] = r.price; if (raw[r.symbol] != null) offset[r.symbol] = r.price - raw[r.symbol]; }
+
+function paintLive() {
+  const dg = p => digitsFor(p);
+  const g = livePrice("XAU/USD");
+  if (g != null) $("#tkPrice").textContent = g.toFixed(2);
+  const p = livePrice(state.symbol);
+  if (p == null || !lastR || lastR.symbol !== state.symbol) return;
+  const f = x => Number(x).toFixed(dg(p));
+  $("#chSub").innerHTML = `<b style="color:var(--text)">${f(p)}</b> <span style="color:var(--buy)">● live</span>`;
+  const hv = document.querySelector(".verdict span"); if (hv) hv.textContent = `${lastR.name || lastR.symbol} ${f(p)}`;
+  // grow the last candle on the chart
+  if (CS && lastR.chart && lastR.chart[chartTf]) {
+    const data = lastR.chart[chartTf], secs = { "1day": 86400, "4h": 14400, "1h": 3600, "15min": 900, "5min": 300, "1min": 60 }[chartTf];
+    const last = data[data.length - 1], bucket = Math.floor(Date.now() / 1000 / secs) * secs;
+    if (bucket > last[0]) data.push([bucket, last[4], Math.max(last[4], p), Math.min(last[4], p), p]);
+    else { last[2] = Math.max(last[2], p); last[3] = Math.min(last[3], p); last[4] = p; }
+    const c = data[data.length - 1];
+    try { CS.update({ time: c[0], open: c[1], high: c[2], low: c[3], close: c[4] }); } catch {}
+  }
+  // live progress of the open setup
+  const S = lastR.setup, box = $("#liveTrade");
+  if (S && box) {
+    const o = S.orders.find(x => ["WAITING", "FILLED", "IN TRADE"].includes(x.status));
+    if (o) {
+      const d = o.side.startsWith("BUY") ? 1 : -1, risk = Math.abs(o.entry - o.stop_loss) || 1e-9;
+      if (o.status === "WAITING") {
+        box.innerHTML = `Live <b>${f(p)}</b> · ${f(Math.abs(p - o.entry))} away from your limit at ${o.entry}`;
+      } else {
+        const R = (p - o.entry) * d / risk;
+        const col = R >= 0 ? "var(--buy)" : "var(--sell)";
+        box.innerHTML = `Live <b>${f(p)}</b> · <b style="color:${col}">${R >= 0 ? "+" : ""}${R.toFixed(2)}R</b>
+          · ${f(Math.abs(o.take_profit_1 - p))} to TP1 · ${f(Math.abs(p - o.stop_loss))} to SL
+          ${R >= 1 ? ' · <b style="color:var(--wait)">move SL to breakeven</b>' : ""}`;
+      }
+    } else box.innerHTML = "";
+  }
 }
 
 // ---------- Gold ticker ----------
