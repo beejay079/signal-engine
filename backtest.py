@@ -92,6 +92,15 @@ def run(base, symbol, entry_tf, P=None, start=None, end=None, books=("market", "
                     tr.update(grade=b["grade"], score=b["score"], opened=iso_t(T))
                     tr["last_ts"] = iso_t(T)
                     active["market"] = tr
+        # quick trade (enter now)
+        if "quick" in books and active["quick"] is None and (view.s_regime != "VOLATILE"):
+            e = se.Ctx(E.iloc[pos - 499:pos + 1], entry_tf)
+            if se.detect_regime(e)[0] != "VOLATILE":
+                q, _ = td.quick_setup(view, e, price, td.strategy_votes(e, se.detect_regime(e)[0]), P)
+                if q:
+                    tr = td.new_trade(view, "market", q["side"], q, T, "Quick trade")
+                    tr.update(kind="quick", grade="-", score=0); tr["last_ts"] = iso_t(T)
+                    active["quick"] = tr
         # new limit (only when a setup candle closes, like a trader re-reading the chart)
         if "limit" in books and active["limit"] is None and new_setup_bar and P["limit_on"]:
             lim, why = td.limit_setup(view, price, atr_e[pos], now.to_pydatetime(), P)
@@ -137,5 +146,5 @@ if __name__ == "__main__":
     df.index = pd.to_datetime(df.index, utc=True)
     tr, info = run(df, sym, tf, progress=True)
     print(info)
-    for k in ("market", "limit"):
+    for k in ("market", "limit", "quick"):
         print(k, stats(tr, k))
