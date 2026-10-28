@@ -59,6 +59,10 @@ TESTED = {
                "15min": "Tested on real gold (2018): 13 trades, 38% won, average -0.15R after spread.",
                "1min": "Not tested on 1M. On 5M market entries lost (-0.46R per trade).",
                "1h": "Not tested on 1H (not enough data)."},
+    "quick": {"5min": "Tested on real gold (2018): 299 trades, 40% won, average -0.24R after spread.",
+              "15min": "Tested on real gold (2018): 188 trades, 43% won, average -0.26R after spread.",
+              "1min": "Not tested on 1M. On 5M quick trades lost (-0.24R per trade after spread).",
+              "1h": "Not tested on 1H (not enough data)."},
     "summary": "No proven edge yet: in testing these setups were close to a coin flip, and the spread made them lose. "
                "Use a demo account and your journal before risking money.",
 }
@@ -89,6 +93,8 @@ DEFAULTS = dict(
     lim_full_close=True,
     lim_min_room=1.0,        # need room to the target liquidity
     lim_expiry_min=120,      # cancel if not filled in 2 hours (x2 on 1h entries)
+    # ---- QUICK TRADE: enter now ----
+    quick_on=True, quick_buf_e=0.3, quick_max_s=2.0, quick_min_room=1.0, quick_tp1_r=1.0, quick_tp2_r=2.0,
     playbooks=None,       # None = all; or a tuple of names
 )
 
@@ -658,6 +664,45 @@ def market_setup(view, e, price, lo_win, hi_win, now, P):
                 e_regime=e_regime, e_regime_why=e_regime_why, sess=sess_txt, sess_pts=sess_pts, pd_pos=pd_pos)
 
 
+
+# --------------------------------------------------------------------------
+# QUICK TRADE - enter now, at market, with a structural stop
+# --------------------------------------------------------------------------
+def quick_setup(view, e, price, e_votes, P):
+    """Immediate entry in the side most timeframes agree on. Lower quality than an A/A+ setup."""
+    S, L, dg = view.st["setup"], view.L, view.digits
+    agr_up, _ = agreement(view.s_votes, e_votes, 1)
+    score = 2 * view.bias + 1.5 * S["trend"] + 1.0 * e.structure + 4 * (agr_up - 0.5)
+    d = 1 if score >= 2 else -1 if score <= -2 else 0
+    if not d:
+        return None, "the timeframes disagree on direction - no side worth taking right now"
+    bad, ext = chase_check(e, d, price, None)
+    if bad:
+        return None, f"{bad[0]} - wait 2-3 candles for a small pullback"
+    i, a = e.i, e.atr_now
+    if d == 1:
+        sw = [e.l[j] for j in e.sl if j >= i - 40 and e.l[j] < price - 0.2 * a]
+        anchor = max(sw) if sw else price - 1.5 * a
+    else:
+        sw = [e.h[j] for j in e.sh if j >= i - 40 and e.h[j] > price + 0.2 * a]
+        anchor = min(sw) if sw else price + 1.5 * a
+    buf = P["quick_buf_e"] * a + view.spread
+    dist = max((price - (anchor - d * buf)) * d, P["sl_min_e"] * a, P["sl_min_spread"] * view.spread)
+    if dist > P["quick_max_s"] * view.s.atr_now:
+        return None, f"nearest {L['entry']} swing is too far for a quick stop ({fmt(dist, dg)})"
+    nearest = view.obstacles(d, price, 0.2 * a)
+    room = abs(nearest - price) / dist if nearest is not None else 9.9
+    if room < P["quick_min_room"]:
+        return None, f"strong level at {fmt(nearest, dg)} is right in front - only 1:{room:.1f} room"
+    tp1 = price + d * P["quick_tp1_r"] * dist
+    tp2 = price + d * min(P["quick_tp2_r"], max(P["quick_tp1_r"], room - 0.1)) * dist
+    agr = agr_up if d == 1 else 1 - agr_up
+    why = [f"{L['top']}/{L['mid']} bias {side_word(view.bias).lower()}", f"{L['setup']} {side_word(S['trend']).lower()}",
+           f"{L['entry']} {side_word(e.structure).lower()}", f"{agr:.0%} of strategies agree"]
+    return dict(side=d, entry=float(price), sl=float(price - d * dist), tp1=float(tp1), tp2=float(tp2), dist=float(dist),
+                room=float(room), score=round(abs(score), 1), agreement=agr, why=why,
+                stop_note=f"beyond the last {L['entry']} {'swing low' if d == 1 else 'swing high'} {fmt(anchor, dg)}"), None
+
 # --------------------------------------------------------------------------
 # LIMIT ORDER - best zone in the pullback
 # --------------------------------------------------------------------------
@@ -918,6 +963,7 @@ def analyse(symbol, entry_tf, frames, balance=100.0, risk_pct=1.0, cent=False, t
         reasons.insert(0, f"last candle is {age_min / 60:.1f}h old - market looks closed")
     if ms["sess_pts"] < 0:
         warnings.append("Outside London/New York hours - fewer, weaker setups.")
+    blocked = bool(reasons)            # market closed / volatility spike
 
     ladder = []
     for key, c, b in (("top", view.t, view.top_b), ("mid", view.m, view.mid_b)):
@@ -993,6 +1039,20 @@ def analyse(symbol, entry_tf, frames, balance=100.0, risk_pct=1.0, cent=False, t
             reasons += focus["fails"][:4]
         if focus and focus["chasing"]:
             result["headline"] = "Don't chase"
+
+    # quick trade: always offered when nothing better (A/A+) is on, unless the market is closed / spiking
+    if P["quick_on"] and not blocked and not active and result.get("status") != "TRADE":
+        q, q_why = quick_setup(view, e, price, ms["e_votes"], P)
+        if q:
+            qd = q["side"]
+            tr = new_trade(view, "market", qd, q, now, "Quick trade")
+            pk = pack(q)
+            pk["rr_tp1"], pk["rr_tp2"] = f"1:{P['quick_tp1_r']:g}", f"1:{abs(q['tp2'] - q['entry']) / q['dist']:.1f}"
+            result["quick"] = dict(side="BUY" if qd == 1 else "SELL", **pk, why=q["why"], stop_note=q["stop_note"],
+                                   agreement=round(100 * q["agreement"]), new_trade=tr,
+                                   tested=TESTED["quick"].get(entry_tf))
+        else:
+            result["quick_note"] = f"No quick trade: {q_why}."
 
     if lim and not active and not result.get("status") == "NO TRADE":
         d = lim["side"]
