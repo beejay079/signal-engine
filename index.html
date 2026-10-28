@@ -156,12 +156,48 @@
   .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(4,16,31,.3);
     border-top-color: #04101f; border-radius: 50%; animation: s .7s linear infinite; vertical-align: -2px; margin-right: 8px; }
   @keyframes s { to { transform: rotate(360deg); } }
+
+  .story p { margin: 0 0 8px; font-size: 13.5px; line-height: 1.5; }
+  .story .lead { font-size: 15px; font-weight: 700; margin-bottom: 10px; }
+  .story .k { color: var(--muted); font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; display: block; margin-bottom: 1px; }
+  .story .inv { color: var(--sell); } .story .nx { color: var(--text); }
+  .order { border-top: 1px solid var(--line); }
+  .ohead { display: flex; justify-content: space-between; align-items: center; padding: 13px 18px 0; }
+  .ohead b { font-size: 13px; letter-spacing: .06em; text-transform: uppercase; }
+  .ohead b.buy { color: var(--buy); } .ohead b.sell { color: var(--sell); }
+  .ohead span { font-size: 12px; color: var(--muted); }
+  .order .levels { border-top: 0; margin-top: 8px; }
+  .act { display: flex; gap: 8px; padding: 12px 18px 14px; }
+  .btn { flex: 1; border: 1px solid var(--line-2); background: var(--panel-2); color: var(--text); border-radius: 10px;
+    padding: 11px; font: 700 13.5px Inter; cursor: pointer; }
+  .btn.pri { background: var(--accent); border-color: var(--accent); color: #04101f; }
+  .btn.sm { flex: none; padding: 7px 10px; font-size: 12px; }
+  .trade { border: 1px solid var(--line); border-radius: 12px; margin-top: 10px; overflow: hidden; }
+  .trade .th { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: var(--panel-2); }
+  .trade .th b { font-size: 13px; }
+  .st { font: 700 10.5px Inter; letter-spacing: .06em; padding: 3px 7px; border-radius: 6px; background: var(--panel); color: var(--muted); }
+  .st.open, .st.partial { color: var(--buy); background: var(--buy-bg); } .st.pending { color: var(--wait); background: var(--wait-bg); }
+  .st.closed { color: var(--text); } .st.cancelled { color: var(--faint); }
+  .adv { padding: 10px 12px; font-size: 13px; border-bottom: 1px solid var(--line); }
+  .adv b { display: block; font-size: 12px; letter-spacing: .06em; margin-bottom: 2px; }
+  .adv b.HOLD, .adv b.KEEP { color: var(--buy); } .adv b.UPDATE { color: var(--wait); } .adv b.CLOSED, .adv b.CANCEL { color: var(--sell); }
+  .tl { display: grid; grid-template-columns: repeat(4, 1fr); font: 600 12px var(--mono); padding: 8px 12px; gap: 6px; border-bottom: 1px solid var(--line); }
+  .tl div small { display: block; font: 600 9.5px Inter; color: var(--faint); text-transform: uppercase; letter-spacing: .06em; }
+  .evs { padding: 8px 12px 10px; font-size: 12px; color: var(--muted); }
+  .evs div { padding: 2px 0; } .evs i { font-style: normal; font-family: var(--mono); color: var(--faint); margin-right: 6px; }
+  .changed { color: var(--wait) !important; }
+  .jr { display: grid; grid-template-columns: 1fr auto; padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: 12.5px; }
+  .jr:last-child { border-bottom: 0; }
+  .pos { color: var(--buy); } .neg { color: var(--sell); }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
+  .stats div { background: var(--panel-2); border-radius: 8px; padding: 8px; text-align: center; font: 700 14px var(--mono); }
+  .stats small { display: block; font: 600 9.5px Inter; color: var(--faint); text-transform: uppercase; letter-spacing: .06em; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <div class="brand"><div class="logo">SE</div><h1>Signal Engine<small>Top-down analysis</small></h1></div>
+    <div class="brand"><div class="logo">SE</div><h1>Signal Engine<small>Top-down analysis · trade tracking</small></h1></div>
     <span id="mode" class="badge">Ready</span>
   </header>
 
@@ -188,8 +224,9 @@
   <p class="hint" id="hint"></p>
 
   <div id="out"></div>
+  <div id="journal"></div>
 
-  <p class="foot">Only A and A+ setups are given as trades. Everything else is Wait.<br>
+  <p class="foot">Market entries only on A / A+ setups. Every trade you take is tracked until it closes.<br>
   Not financial advice. Check the price in MT5 and the news calendar before entering.</p>
 </div>
 
@@ -201,11 +238,13 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem("se_" + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem("se_" + k, JSON.stringify(v)); } catch {} },
 };
-let state = { symbol: store.get("symbol", "XAU/USD"), tf: store.get("tf", "1min"),
+let state = { symbol: store.get("symbol", "XAU/USD"), tf: store.get("tf", "5min"),
   balance: store.get("balance", 100), risk: store.get("risk", 1), cent: store.get("cent", false) };
-if (!STACKS[state.tf]) state.tf = "1min";
+if (!STACKS[state.tf]) state.tf = "5min";
 let password = store.get("pw", "");
-let watchTimer = null, lastKey = null, busy = false;
+const isLive = t => ["pending", "open", "partial"].includes(t.status);
+let trades = store.get("trades", []);          // every trade you took (open + history)
+let watchTimer = null, lastKey = null, busy = false, last = null;
 
 // ---------- controls ----------
 $("#pairs").innerHTML = PAIRS.map(([s, n]) =>
@@ -231,9 +270,9 @@ $("#watch").onchange = e => {
     try { window.Notification && Notification.permission === "default" && Notification.requestPermission(); } catch {}
     getSignal(); watchTimer = setInterval(() => getSignal(true), 30000);
   }
-  $("#hint").textContent = e.target.checked ? "Watching every 30s — keep this page open. You'll be alerted on an A/A+ setup." : "";
+  $("#hint").textContent = e.target.checked ? "Watching every 30s — keep this page open. Alerts for new A/A+ setups and every change to your trades." : "";
 };
-paint();
+paint(); renderJournal();
 
 // ---------- fetch ----------
 async function getSignal(silent = false) {
@@ -241,9 +280,12 @@ async function getSignal(silent = false) {
   busy = true;
   const btn = $("#go");
   if (!silent) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Reading 4 timeframes…'; }
-  const q = new URLSearchParams({ symbol: state.symbol, tf: state.tf, balance: state.balance, risk: state.risk, cent: state.cent });
+  const body = { symbol: state.symbol, tf: state.tf, balance: +state.balance, risk: +state.risk, cent: state.cent,
+                 trades: trades.filter(isLive) };
   try {
-    const res = await fetch("/api/signal?" + q, { headers: password ? { "X-App-Password": password } : {} });
+    const headers = { "Content-Type": "application/json" };
+    if (password) headers["X-App-Password"] = password;
+    const res = await fetch("/api/signal", { method: "POST", headers, body: JSON.stringify(body) });
     if (res.status === 401) {
       const pw = prompt("Enter your app password");
       if (pw) { password = pw; store.set("pw", pw); busy = false; return getSignal(silent); }
@@ -251,9 +293,21 @@ async function getSignal(silent = false) {
     }
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || data.detail || "Something went wrong");
-    render(data);
-    if (data.status === "TRADE" && data.key !== lastKey) alertTrade(data);
-    lastKey = data.status === "TRADE" ? data.key : lastKey;
+    // merge tracked trades back, alert on any change
+    const changes = [];
+    (data.tracked || []).forEach(({ trade }) => {
+      const i = trades.findIndex(t => t.id === trade.id);
+      if (i < 0) return;
+      if ((trade.events || []).length > (trades[i].events || []).length) changes.push(trade);
+      trades[i] = trade;
+    });
+    store.set("trades", trades.slice(-150));
+    last = data; render(data); renderJournal();
+    if (changes.length) changes.forEach(t => notify(`${t.symbol} ${t.side > 0 ? "BUY" : "SELL"}: ${t.events[t.events.length - 1].text}`, t.side));
+    if (data.status === "TRADE" && data.new_trade && lastKey !== tradeKey(data)) {
+      notify(`${data.side} ${data.symbol} — ${data.grade} ${data.playbook}. Entry ${data.trade.entry} SL ${data.trade.stop_loss} TP1 ${data.trade.take_profit_1}`, data.side === "BUY" ? 1 : -1);
+      lastKey = tradeKey(data);
+    }
   } catch (err) {
     if (!silent) $("#out").innerHTML = `<div class="card"><div class="err">${esc(err.message)}</div></div>`;
     else $("#hint").textContent = "Watching… last check failed: " + err.message;
@@ -261,115 +315,156 @@ async function getSignal(silent = false) {
     busy = false; btn.disabled = false; btn.textContent = "Analyse market";
   }
 }
+const tradeKey = d => `${d.symbol}|${d.playbook}|${d.side}|${d.trade.entry}`;
+
+function takeTrade(which) {
+  const t = which === "market" ? last.new_trade : last.limit.new_trade;
+  if (!t || trades.some(x => x.id === t.id)) return;
+  trades.push(JSON.parse(JSON.stringify(t)));
+  store.set("trades", trades);
+  getSignal();
+}
+function removeTrade(id) {
+  const t = trades.find(x => x.id === id); if (!t) return;
+  if (isLive(t)) { t.status = "cancelled"; t.events.push({ time: new Date().toISOString(), text: "Removed by you" }); }
+  else trades = trades.filter(x => x.id !== id);
+  store.set("trades", trades); renderJournal(); if (last) render(last);
+}
 
 // ---------- render ----------
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const lv = (k, v, x, c = "") => `<div class="lv ${c}" data-copy="${esc(v)}"><div class="k">${k}</div><div class="v">${esc(v)}</div><div class="x">${x}</div></div>`;
+const px = (v, d) => v == null ? "-" : (+v).toFixed(d);
+const hhmm = iso => { try { return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); } catch { return ""; } };
+
+function tradeCard(t, adv) {
+  const d = t.digits ?? 2, buy = t.side > 0;
+  const act = adv ? adv.action : (t.status === "closed" ? "CLOSED" : t.status === "cancelled" ? "CANCEL" : "");
+  const sl0 = Math.abs(t.sl - t.sl0) > 1e-9;
+  return `<div class="trade"><div class="th"><b>${buy ? "BUY" : "SELL"} ${esc(t.symbol)} · ${t.kind === "limit" ? "limit" : "market"} @ ${px(t.entry, d)}</b>
+      <span class="st ${t.status}">${t.status.toUpperCase()}${t.status === "closed" ? ` ${t.realized_r >= 0 ? "+" : ""}${(+t.realized_r).toFixed(2)}R` : ""}</span></div>
+    ${adv ? `<div class="adv"><b class="${act.split(" ")[0]}">${esc(act)}</b>${esc(adv.text)}</div>` : ""}
+    <div class="tl"><div><small>Entry</small>${px(t.entry, d)}</div><div class="${sl0 ? "changed" : ""}"><small>Stop${sl0 ? " (moved)" : ""}</small>${px(t.sl, d)}</div>
+      <div><small>TP1</small>${px(t.tp1, d)}</div><div><small>TP2</small>${px(t.tp2, d)}</div></div>
+    <div class="evs">${(t.events || []).slice(-6).map(e => `<div><i>${hhmm(e.time)}</i>${esc(e.text)}</div>`).join("") || "<div>Tracking started — waiting for the next candle.</div>"}
+      <div style="margin-top:6px"><button class="btn sm" onclick="removeTrade('${t.id}')">${isLive(t) ? "I closed / removed it" : "Delete"}</button></div></div></div>`;
+}
 
 function render(r) {
   const badge = $("#mode");
   badge.className = "badge " + (r.demo ? "demo" : "live");
   badge.textContent = r.demo ? "Demo data" : "Live";
-
+  const d = r.digits;
   const trade = r.status === "TRADE";
-  const side = trade ? r.side : (r.plan ? r.plan.side : null);
-  const cls = trade ? (r.side === "BUY" ? "buy" : "sell") : r.status === "WAIT" ? "wait" : "neutral";
+  const cls = trade ? (r.side === "BUY" ? "buy" : "sell") : r.status === "WAIT" || r.status === "TRACKING" ? "wait" : "neutral";
   const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
   const f = r.focus;
-  const gradeColor = g => g === "A+" || g === "A" ? "var(--buy)" : g === "B" ? "var(--wait)" : "var(--sell)";
-  const gradeRing = (g, s) => `<div class="grade" style="--p:${s};--c:${gradeColor(g)}"><div><b>${g}</b><small>${s}/100</small></div></div>`;
-
-  let pbLine;
-  if (trade) pbLine = `<b>${esc(r.playbook)}</b> · ${r.agreement}% strategy agreement`;
-  else if (f) pbLine = `Closest setup: <b>${esc(f.name)} ${f.side.toLowerCase()}</b>`;
-  else pbLine = esc(r.bias_text);
+  const gc = g => g === "A+" || g === "A" ? "var(--buy)" : g === "B" ? "var(--wait)" : "var(--sell)";
+  const ring = (g, s) => `<div class="grade" style="--p:${s};--c:${gc(g)}"><div><b>${g}</b><small>${s}/100</small></div></div>`;
+  const pbLine = trade ? `<b>${esc(r.playbook)}</b> · ${r.agreement}% strategy agreement`
+    : f ? `Closest market setup: <b>${esc(f.name)} ${f.side.toLowerCase()}</b>` : esc(r.bias_text);
 
   let html = `<div class="card"><div class="hero ${cls}"><div class="top"><div>
-      <div class="verdict">${esc(r.headline)}</div>
-      <div class="pb">${pbLine}</div>
+      <div class="verdict">${esc(r.headline)}</div><div class="pb">${pbLine}</div>
       <div class="px">${esc(r.symbol)} ${r.price} · ${esc(r.session)} · ${now}</div></div>
-      ${trade ? gradeRing(r.grade, r.score) : f ? gradeRing(f.grade, f.score) : ""}</div></div>`;
+      ${trade ? ring(r.grade, r.score) : f ? ring(f.grade, f.score) : ""}</div></div>`;
 
-  // top-down ladder
-  html += `<div class="section"><h3>Top-down analysis</h3><div class="ladder">${r.ladder.map(s => `
-      <div class="step"><div class="tf">${esc(s.tf)}</div>
-        <div class="d"><b>${esc(s.role)}</b> · ${esc(s.detail)}</div>
-        <span class="dir ${s.dir}">${s.dir}</span></div>`).join("")}</div></div>`;
+  // your tracked trades come first
+  if (r.tracked && r.tracked.length)
+    html += `<div class="section"><h3>Your trades on ${esc(r.symbol)} ${esc(r.stack.entry)}</h3>${r.tracked.map(x => tradeCard(x.trade, x.advice)).join("")}</div>`;
+
+  // market story
+  const s = r.story;
+  html += `<div class="section story"><h3>Market story</h3><p class="lead">${esc(s.headline)}</p>
+    ${s.came_from ? `<p><span class="k">Where it came from</span>${esc(s.came_from)}</p>` : ""}
+    <p><span class="k">What it is doing now</span>${esc(s.doing)}</p>
+    <p class="nx"><span class="k">Where it is likely going</span>${esc(s.next)}</p>
+    ${s.invalidation ? `<p class="inv"><span class="k">What proves it wrong</span>${esc(s.invalidation)}${s.alternative ? " " + esc(s.alternative) : ""}</p>` : ""}
+    </div>`;
+
+  html += `<div class="section"><h3>Top-down structure</h3><div class="ladder">${r.ladder.map(x => `
+      <div class="step"><div class="tf">${esc(x.tf)}</div><div class="d"><b>${esc(x.role)}</b> · ${esc(x.detail)}</div>
+      <span class="dir ${x.dir}">${x.dir}</span></div>`).join("")}</div></div>`;
 
   if (trade) {
     const t = r.trade;
-    html += `<div class="levels">
-      ${lv("Entry (market)", t.entry, "tap any value to copy")}
-      ${lv("Lot size", t.lot_size, "risk $" + t.risk_amount)}
-      ${lv("Stop loss", t.stop_loss, "−" + t.sl_distance, "sl")}
-      ${lv("Take profit 1", t.take_profit_1, t.rr_tp1 + " · close half", "tp")}
-      ${lv("Take profit 2", t.take_profit_2, t.rr_tp2, "tp")}
-      ${lv("Grade", r.grade, r.score + "/100")}
-    </div>
-    <div class="section"><h3>Manage the trade</h3><ul class="plain">${r.management.map(m => `<li>${esc(m)}</li>`).join("")}</ul></div>`;
-    if (r.confluence && r.confluence.length)
-      html += `<div class="section"><h3>Strategies agreeing (${r.confluence.length})</h3><div class="tags">${r.confluence.map(n => `<span class="tag">${esc(n)}</span>`).join("")}</div></div>`;
-  } else {
-    if (r.reasons && r.reasons.length)
-      html += `<div class="section"><h3>Why no entry now</h3><ul class="plain">${r.reasons.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>`;
-    if (r.plan) {
-      const p = r.plan, buy = p.side === "BUY";
-      html += `<div class="section"><h3>Plan — wait for a ${buy ? "buy" : "sell"}</h3>
-        <div class="zone" style="color:var(--${buy ? "buy" : "sell"})">${p.zone_bot} – ${p.zone_top}</div>
-        <div class="muted">${esc(p.zone)}${p.confluence > 1 ? ` · ${p.confluence} confluences` : ""} · ${p.distance} from price</div>
-        <p style="margin:10px 0 0;font-size:13.5px">${esc(p.wait_for)}</p>
-        ${p.limit ? `<div class="sub-levels levels">
-            ${lv(buy ? "Buy limit" : "Sell limit", p.limit.entry, "optional — at the zone edge")}
-            ${lv("Lot size", p.limit.lot_size, "risk $" + p.limit.risk_amount)}
-            ${lv("Stop loss", p.limit.stop_loss, "beyond the zone", "sl")}
-            ${lv("TP1 / TP2", p.limit.take_profit_1 + " / " + p.limit.take_profit_2, "1:2 / next level", "tp")}
-          </div><div class="muted" style="margin-top:8px">Waiting for the ${esc(r.stack.entry)} confirmation is safer than a blind limit.</div>`
-          : p.limit_note ? `<div class="muted" style="margin-top:8px">No limit order here: ${esc(p.limit_note)}.</div>` : ""}
-      </div>`;
-    }
+    html += `<div class="order"><div class="ohead"><b class="${r.side === "BUY" ? "buy" : "sell"}">Option A · ${r.side} now (market)</b><span>${esc(r.playbook)}</span></div>
+      <div class="levels">${lv("Entry", t.entry, "tap to copy")}${lv("Lot size", t.lot_size, "risk $" + t.risk_amount)}
+      ${lv("Stop loss", t.stop_loss, "−" + t.sl_distance, "sl")}${lv("Take profit 1", t.take_profit_1, t.rr_tp1 + " · half off", "tp")}
+      ${lv("Take profit 2", t.take_profit_2, t.rr_tp2, "tp")}${lv("Grade", r.grade, r.score + "/100")}</div>
+      <div class="section" style="border-bottom:0;padding-top:4px"><ul class="plain">${r.management.map(m => `<li>${esc(m)}</li>`).join("")}</ul></div>
+      ${r.tested && r.tested.market ? `<div class="section" style="border-bottom:0;padding-top:0"><div class="warn">⚑ ${esc(r.tested.market)}</div></div>` : ""}
+      <div class="act"><button class="btn pri" onclick="takeTrade('market')">I took it — track this trade</button></div></div>`;
+  } else if (r.reasons && r.reasons.length) {
+    html += `<div class="section"><h3>Why no market entry now</h3><ul class="plain">${r.reasons.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>`;
+  }
+  if (r.limit) {
+    const p = r.limit, buy = p.side.startsWith("BUY");
+    html += `<div class="order"><div class="ohead"><b class="${buy ? "buy" : "sell"}">${trade ? "Option B · " : ""}${p.side}</b><span>${p.distance} from price</span></div>
+      <div class="section" style="border-bottom:0;padding:8px 18px 0"><div class="muted">Zone ${p.zone_bot} – ${p.zone_top}: ${esc(p.zone)}${p.discount ? " · in discount" : ""}</div></div>
+      <div class="levels">${lv(buy ? "Buy limit" : "Sell limit", p.entry, "at the zone")}${lv("Lot size", p.lot_size, "risk $" + p.risk_amount)}
+      ${lv("Stop loss", p.stop_loss, "beyond the zone", "sl")}${lv("Take profit", p.take_profit_1, p.rr_tp1 + (p.single_tp ? " · close all" : " · half off"), "tp")}
+      ${p.single_tp ? lv("Target liquidity", p.take_profit_2, "cancel if reached before fill") : lv("Take profit 2", p.take_profit_2, p.rr_tp2 + " · target liquidity", "tp")}${lv("Cancel by", p.expires, "if not filled")}</div>
+      <div class="section" style="border-bottom:0;padding-top:4px"><div class="muted">Cancel if: ${p.cancel_if.map(esc).join(" · ")}</div>
+        ${r.tested && r.tested.limit ? `<div class="warn" style="margin-top:6px">⚑ ${esc(r.tested.limit)}</div>` : ""}</div>
+      <div class="act"><button class="btn ${trade ? "" : "pri"}" onclick="takeTrade('limit')">I placed it — track this limit</button></div></div>`;
+  } else if (r.limit_note && !(r.tracked || []).some(x => isLive(x.trade))) {
+    html += `<div class="section"><div class="muted">${esc(r.limit_note)}</div></div>`;
   }
 
-  if (f && f.checks) {
+  if (f && f.checks)
     html += `<div class="section"><h3>${trade ? "Entry checklist" : "Checklist — " + esc(f.name) + " " + f.side.toLowerCase()}</h3><ul class="checks">${
       f.checks.map(c => `<li class="${c.ok ? "ok" : "no"}"><i>${c.ok ? "✓" : "✗"}</i><div><span>${esc(c.item)}</span><small>${esc(c.detail)}</small></div></li>`).join("")}</ul></div>`;
-  }
   if (r.warnings && r.warnings.length)
     html += `<div class="section">${r.warnings.map(w => `<div class="warn">⚠ ${esc(w)}</div>`).join("")}</div>`;
-
-  if (r.candidates && r.candidates.length) {
+  if (r.candidates && r.candidates.length)
     html += `<details><summary>Playbooks tested (${r.candidates.length})</summary><div class="votes pbs">${r.candidates.map(c => `
       <div class="p"><div>${esc(c.name)} ${c.side.toLowerCase()}<small>${c.valid ? "all checks passed" : esc(c.fails[0] || "")}</small></div>
       <span class="n">${c.passed}/${c.total}</span><span class="g ${c.valid ? "v" : ""}">${c.grade}</span></div>`).join("")}</div></details>`;
-  }
   const row = v => `<div class="vote"><i class="${v.vote > 0 ? "b" : "s"}">${v.vote > 0 ? "BUY" : "SELL"}</i><div>${esc(v.strategy)}<small>${esc(v.reason)}</small></div></div>`;
   const on = list => (list || []).filter(v => v.active && v.vote !== 0);
+  if (r.tested) html += `<div class="section"><h3>Honest track record</h3><div class="muted">${esc(r.tested.summary)}</div></div>`;
   html += `<details><summary>All strategy votes</summary><div class="votes">
       <h4>${esc(r.stack.setup)} setup chart (${on(r.votes.setup).length})</h4>${on(r.votes.setup).map(row).join("") || "<small class='muted'>None</small>"}
       <h4>${esc(r.stack.entry)} entry chart (${on(r.votes.entry).length})</h4>${on(r.votes.entry).map(row).join("") || "<small class='muted'>None</small>"}
     </div></details></div>`;
   $("#out").innerHTML = html;
-
   document.querySelectorAll(".lv[data-copy]").forEach(el => el.onclick = () => {
     navigator.clipboard && navigator.clipboard.writeText(el.dataset.copy);
     el.classList.add("copied"); setTimeout(() => el.classList.remove("copied"), 1200);
   });
 }
 
-// ---------- alert when an A/A+ trade appears ----------
-function alertTrade(r) {
-  try { navigator.vibrate && navigator.vibrate([250, 120, 250, 120, 250]); } catch {}
+function renderJournal() {
+  const live = trades.filter(isLive).filter(t => !(last && t.symbol === last.symbol && t.tf === last.entry_tf));
+  const done = trades.filter(t => t.status === "closed").slice().reverse();
+  if (!live.length && !done.length) { $("#journal").innerHTML = ""; return; }
+  let html = `<div class="card"><div class="section"><h3>Your journal</h3>`;
+  if (done.length) {
+    const r = done.map(t => +t.realized_r), w = r.filter(x => x > 0.05).length;
+    html += `<div class="stats"><div>${done.length}<small>trades</small></div><div>${Math.round(100 * w / done.length)}%<small>win</small></div>
+      <div class="${r.reduce((a, b) => a + b, 0) >= 0 ? "pos" : "neg"}">${r.reduce((a, b) => a + b, 0).toFixed(1)}R<small>total</small></div>
+      <div>${(r.reduce((a, b) => a + b, 0) / done.length).toFixed(2)}<small>avg R</small></div></div>`;
+  }
+  if (live.length) html += `<div class="muted" style="margin-bottom:6px">Open on other markets/timeframes (select them to update):</div>` + live.map(t => tradeCard(t)).join("");
+  html += done.slice(0, 20).map(t => `<div class="jr"><div>${t.side > 0 ? "BUY" : "SELL"} ${esc(t.symbol)} ${esc(t.tf)} · ${esc(t.playbook)}<br><small class="muted">${esc((t.events || []).slice(-1)[0]?.text || "")}</small></div>
+      <b class="${t.realized_r >= 0 ? "pos" : "neg"}">${t.realized_r >= 0 ? "+" : ""}${(+t.realized_r).toFixed(2)}R</b></div>`).join("");
+  html += `</div></div>`;
+  $("#journal").innerHTML = html;
+}
+
+// ---------- alerts ----------
+function notify(text, side) {
+  try { navigator.vibrate && navigator.vibrate([250, 120, 250]); } catch {}
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     [0, .18, .36].forEach(t => { const o = ctx.createOscillator(), g = ctx.createGain();
-      o.frequency.value = r.side === "BUY" ? 880 : 660; o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = side > 0 ? 880 : 660; o.connect(g); g.connect(ctx.destination);
       g.gain.setValueAtTime(.15, ctx.currentTime + t); g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + t + .15);
       o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + .16); });
   } catch {}
-  try {
-    if (window.Notification && Notification.permission === "granted")
-      new Notification(`${r.side} ${r.symbol} — ${r.grade} ${r.playbook}`,
-        { body: `Entry ${r.trade.entry} · SL ${r.trade.stop_loss} · TP1 ${r.trade.take_profit_1}` });
-  } catch {}
+  try { if (window.Notification && Notification.permission === "granted") new Notification("Signal Engine", { body: text }); } catch {}
+  $("#hint").textContent = "🔔 " + text;
 }
 </script>
 </body>

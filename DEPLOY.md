@@ -1,10 +1,10 @@
-# Signal Engine — top-down edition
+# Signal Engine — top-down + trade tracking
 
 ## Already live on Render? Update it in 2 minutes
 
 1. Open your `signal-engine` repo on GitHub → **Add file** → **Upload files**.
 2. Drag in **all** files from this zip (they replace the old ones) → **Commit changes**.
-3. Delete the old `limit_orders.py` from the repo (open it → **⋯** → **Delete file**). It is no longer used.
+3. If your repo still has `limit_orders.py`, delete it (open it → **⋯** → **Delete file**). It is no longer used.
 4. Render redeploys by itself. Wait for **Live**, then refresh the page on your phone.
 
 Your `TWELVE_DATA_API_KEY` and `APP_PASSWORD` stay as they are.
@@ -29,7 +29,7 @@ After that you just open a link on your phone and tap **Get signal**.
 ## Step 2 — Upload the files to GitHub
 
 1. Unzip `signal-site.zip` on your Mac. You will see these files:
-   `app.py`, `signal_engine.py`, `topdown.py`, `index.html`, `requirements.txt`, `Procfile`, `runtime.txt`, `DEPLOY.md`
+   `app.py`, `signal_engine.py`, `topdown.py`, `backtest.py`, `index.html`, `requirements.txt`, `Procfile`, `runtime.txt`, `DEPLOY.md`
 2. Go to **github.com** → click **+** (top right) → **New repository**.
 3. Name it `signal-engine`, choose **Private**, click **Create repository**.
 4. On the next page click the link **"uploading an existing file"**.
@@ -74,36 +74,40 @@ The first time you tap **Get signal**, it asks for your `APP_PASSWORD`. It remem
 
 ---
 
-## How it reads the market
+## What you get on every check
 
-Pick the market and your **entry timeframe**. Every check reads four charts top-down:
+1. **Market story** — where the move came from (the protected low/high that started it), what price is doing now
+   (impulse, pullback, or structure breaking), where it is likely going (the liquidity it is drawn to), and the level
+   that proves the idea wrong.
+2. **Top-down structure** — bias timeframes (swings HH/HL/LH/LL, protected level), setup timeframe (impulse or pullback
+   and how deep), entry timeframe.
+3. **Option A — market order** (only A/A+ setups): entry, stop beyond structure, TP1/TP2, lot size.
+4. **Limit order** at the best zone in the pullback: stop beyond the zone, one take-profit at 1:1,
+   cancel rules and a cancel time.
+5. **Checklist** of every rule, ✓ or ✗.
 
-| Entry | Bias | Setup | Entry trigger |
-|---|---|---|---|
-| 1m | 4H + 1H | 15M | 1M |
-| 5m | 4H + 1H | 15M | 5M |
-| 15m | D1 + 4H | 1H | 15M |
-| 1h | W1 + D1 | 4H | 1H |
+## Tracking the trade you took
 
-1. **Bias** — structure (higher highs/lows or lower highs/lows, last BOS/CHoCH) and EMA50/200 decide which side you may trade.
-2. **Setup** — has price pulled back into a point of interest (order block, fair value gap, support/resistance, previous-day level, Fib 50–61.8%, EMA50)?
-3. **Entry** — is there a *fresh* trigger there (CHoCH, liquidity sweep + reclaim, engulfing/pin bar, breakout-retest) that is still holding?
+Tap **I took it** (market) or **I placed it** (limit). Your phone remembers it and every check updates it:
 
-Five playbooks are tested every time — **Trend pullback, Liquidity sweep, Breakout retest, Range fade, Momentum break** — and only the best valid one is used. All 29 strategies vote on the setup and entry charts; at least half must agree.
+- limit **filled**, or **cancelled** (not filled in time, or price reached the target without you);
+- **TP1 hit → half closed, stop moved to entry**, then the stop **trails** under each new higher low / lower high;
+- **closed early** if the entry chart breaks structure against you before TP1, or the setup timeframe flips;
+- a **warning with the reason** whenever the structure changes.
 
-**Don't-chase rules.** No entry if price is already stretched from the EMA20, ran far past the trigger, made 6+ candles in a row, has extreme RSI, or has left the zone. You'll see **Don't chase** with the next pullback zone instead.
+Every change has a time and a reason. With **Watch & alert me** on (page open), your phone beeps/vibrates on every
+change and on every new A/A+ setup. New signals on that market pause while you have a trade open there.
+Copy any stop change into MT5 yourself. The app can't move your MT5 orders.
 
-## What you'll see
+**Journal** at the bottom: every closed trade with its R result, win rate and total.
 
-- **BUY now / SELL now** (grade **A** or **A+** only) → enter at market with the SL, TP1, TP2 and lot shown. Tap a number to copy it. Follow **Manage the trade**: close half at TP1 and move the stop to entry; exit early if the trigger level breaks.
-- **Wait** → the direction is there but the entry isn't. The **Plan** shows the zone to wait for and what trigger to wait for. An optional limit order is shown when it makes sense.
-- **Don't chase** → the move already went. Wait for the pullback zone shown.
-- **No trade / Stand aside** → no clear top-down direction, market closed, or a news-type volatility spike.
-- **Checklist** shows exactly which checks passed (✓) and failed (✗).
+## Be honest with yourself: the test results
 
-Turn on **Watch & alert me** and keep the page open: it checks every 30 seconds and beeps, vibrates and (if you allow it) shows a notification when an A/A+ setup appears. One alert per setup — no repeats.
+`BACKTEST.md` has the full test on real gold candles. In short: after spread, none of the setups made money in
+testing — they were close to a coin flip. Each order card shows its tested result. Use a demo account and your
+journal first.
 
-Data use: the higher timeframes are cached, so Watch mode uses about 2–3 Twelve Data credits a minute. The free plan's 800 credits a day covers roughly 4–5 hours of watching.
+Data use: Watch mode uses about 2–3 Twelve Data credits a minute (800 free per day ≈ 4–5 hours of watching).
 
 ## If something goes wrong
 

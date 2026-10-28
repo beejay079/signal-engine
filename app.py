@@ -15,6 +15,9 @@ in Watch mode usually costs only 1-2 Twelve Data credits.
 Environment variables (set them on Render):
   TWELVE_DATA_API_KEY   your Twelve Data key (without it the site runs on fake demo data)
   APP_PASSWORD          optional - if set, the page asks for it once
+
+Trades you take are stored on your phone and sent with every check, so the
+server can track them (fills, stop moves, early exits) even after it sleeps.
 """
 import json
 import os
@@ -25,6 +28,7 @@ import numpy as np
 import pandas as pd
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, Response
+from pydantic import BaseModel
 
 import signal_engine as se
 import topdown as td
@@ -86,10 +90,18 @@ def health():
     return {"ok": True, "live": bool(os.getenv("TWELVE_DATA_API_KEY"))}
 
 
-@app.get("/api/signal")
-def signal(symbol: str = "XAU/USD", tf: str = "1min", balance: float = 100.0,
-           risk: float = 1.0, cent: bool = False,
-           x_app_password: str | None = Header(default=None)):
+class Req(BaseModel):
+    symbol: str = "XAU/USD"
+    tf: str = "5min"
+    balance: float = 100.0
+    risk: float = 1.0
+    cent: bool = False
+    trades: list = []          # trades the phone is tracking (sent back every check)
+
+
+@app.post("/api/signal")
+def signal(req: Req, x_app_password: str | None = Header(default=None)):
+    symbol, tf, balance, risk, cent = req.symbol, req.tf, req.balance, req.risk, req.cent
     password = os.getenv("APP_PASSWORD")
     if password and x_app_password != password:
         raise HTTPException(status_code=401, detail="Wrong password")
@@ -113,7 +125,7 @@ def signal(symbol: str = "XAU/USD", tf: str = "1min", balance: float = 100.0,
         for name, df in frames.items():
             if len(df) < 120:
                 raise RuntimeError(f"Not enough {name} candles from the data feed ({len(df)}).")
-        result = td.analyse(symbol, tf, frames, balance, risk, cent)
+        result = td.analyse(symbol, tf, frames, balance, risk, cent, trades=req.trades)
         result["demo"] = not key
     except Exception as e:
         msg = str(e)
