@@ -81,17 +81,14 @@ The first time you tap **Get signal**, it asks for your `APP_PASSWORD`. It remem
    that proves the idea wrong.
 2. **Top-down structure** — bias timeframes (swings HH/HL/LH/LL, protected level), setup timeframe (impulse or pullback
    and how deep), entry timeframe.
-3. **⚡ Quick trade** — a trade you can enter right now at market, in the side most timeframes agree on, with the
-   stop beyond the last swing. It is skipped only if the move is already stretched, a level is right in front,
-   or the timeframes disagree. Faster but weaker than an A/A+ setup — keep the lot small.
-4. **Option A — market order** (only A/A+ setups): entry, stop beyond structure, TP1/TP2, lot size.
-5. **Limit order** at the best zone in the pullback: stop beyond the zone, one take-profit at 1:1,
+3. **Option A — market order** (only A/A+ setups): entry, stop beyond structure, TP1/TP2, lot size.
+4. **Limit order** at the best zone in the pullback: stop beyond the zone, one take-profit at 1:1,
    cancel rules and a cancel time.
-6. **Checklist** of every rule, ✓ or ✗.
+5. **Checklist** of every rule, ✓ or ✗.
 
 ## Tracking the trade you took
 
-Tap **I took it** (quick or market trade) or **I placed it** (limit). Your phone remembers it and every check updates it:
+Tap **I took it** (market) or **I placed it** (limit). Your phone remembers it and every check updates it:
 
 - limit **filled**, or **cancelled** (not filled in time, or price reached the target without you);
 - **TP1 hit → half closed, stop moved to entry**, then the stop **trails** under each new higher low / lower high;

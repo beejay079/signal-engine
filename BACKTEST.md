@@ -12,8 +12,6 @@ candles are used only after they close. Spread ($0.30) is charged on every trade
 | 15M limit (pullback zone, 1:1) | 38 | 47% | −0.17R | −6.5R |
 | 15M market (A/A+ only) | 13 | 38% | −0.15R | −1.9R |
 | 5M market (A/A+ only) | 30 | ~27% | −0.46R | −13.8R |
-| 15M quick trade (enter now) | 188 | 43% | −0.26R | −48.2R |
-| 5M quick trade (enter now, Apr–Jun) | 299 | 40% | −0.24R | −71.9R |
 
 ## What we learned
 

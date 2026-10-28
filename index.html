@@ -304,10 +304,6 @@ async function getSignal(silent = false) {
     store.set("trades", trades.slice(-150));
     last = data; render(data); renderJournal();
     if (changes.length) changes.forEach(t => notify(`${t.symbol} ${t.side > 0 ? "BUY" : "SELL"}: ${t.events[t.events.length - 1].text}`, t.side));
-    if (data.quick && silent && lastKey !== "q|" + data.quick.side) {
-      notify(`Quick ${data.quick.side} ${data.symbol}: entry ${data.quick.entry} SL ${data.quick.stop_loss} TP1 ${data.quick.take_profit_1}`, data.quick.side === "BUY" ? 1 : -1);
-      lastKey = "q|" + data.quick.side;
-    }
     if (data.status === "TRADE" && data.new_trade && lastKey !== tradeKey(data)) {
       notify(`${data.side} ${data.symbol} — ${data.grade} ${data.playbook}. Entry ${data.trade.entry} SL ${data.trade.stop_loss} TP1 ${data.trade.take_profit_1}`, data.side === "BUY" ? 1 : -1);
       lastKey = tradeKey(data);
@@ -322,7 +318,7 @@ async function getSignal(silent = false) {
 const tradeKey = d => `${d.symbol}|${d.playbook}|${d.side}|${d.trade.entry}`;
 
 function takeTrade(which) {
-  const t = which === "market" ? last.new_trade : which === "quick" ? last.quick.new_trade : last.limit.new_trade;
+  const t = which === "market" ? last.new_trade : last.limit.new_trade;
   if (!t || trades.some(x => x.id === t.id)) return;
   trades.push(JSON.parse(JSON.stringify(t)));
   store.set("trades", trades);
@@ -376,20 +372,6 @@ function render(r) {
   // your tracked trades come first
   if (r.tracked && r.tracked.length)
     html += `<div class="section"><h3>Your trades on ${esc(r.symbol)} ${esc(r.stack.entry)}</h3>${r.tracked.map(x => tradeCard(x.trade, x.advice)).join("")}</div>`;
-
-  // quick trade - enter now
-  if (r.quick) {
-    const q = r.quick, qb = q.side === "BUY";
-    html += `<div class="order" style="border-top:0"><div class="ohead"><b class="${qb ? "buy" : "sell"}">⚡ Quick trade · ${q.side} now</b><span>${q.agreement}% agree</span></div>
-      <div class="levels">${lv("Entry (market)", q.entry, "enter now")}${lv("Lot size", q.lot_size, "risk $" + q.risk_amount)}
-      ${lv("Stop loss", q.stop_loss, esc(q.stop_note), "sl")}${lv("Take profit 1", q.take_profit_1, q.rr_tp1 + " · half off, stop to entry", "tp")}
-      ${lv("Take profit 2", q.take_profit_2, q.rr_tp2, "tp")}${lv("Why this side", qb ? "UP" : "DOWN", esc(q.why.join(" · ")))}</div>
-      <div class="section" style="border-bottom:0;padding-top:4px"><div class="muted">Faster but weaker than an A/A+ setup — keep the lot small.</div>
-        ${q.tested ? `<div class="warn" style="margin-top:6px">⚑ ${esc(q.tested)}</div>` : ""}</div>
-      <div class="act"><button class="btn pri" onclick="takeTrade('quick')">I took it — track this trade</button></div></div>`;
-  } else if (r.quick_note && !(r.tracked || []).some(x => isLive(x.trade))) {
-    html += `<div class="section"><h3>⚡ Quick trade</h3><div class="muted">${esc(r.quick_note)}</div></div>`;
-  }
 
   // market story
   const s = r.story;
