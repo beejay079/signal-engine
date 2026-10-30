@@ -192,6 +192,36 @@
   .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
   .stats div { background: var(--panel-2); border-radius: 8px; padding: 8px; text-align: center; font: 700 14px var(--mono); }
   .stats small { display: block; font: 600 9.5px Inter; color: var(--faint); text-transform: uppercase; letter-spacing: .06em; }
+  /* ---------- market structure per timeframe ---------- */
+  .sx { border: 1px solid var(--line); border-radius: 12px; margin-top: 10px; overflow: hidden; }
+  .sx > summary { display: flex; align-items: center; gap: 10px; padding: 11px 12px; cursor: pointer; list-style: none; background: var(--panel-2); }
+  .sx > summary::-webkit-details-marker { display: none; }
+  .sx .tfb { font: 800 13px var(--mono); min-width: 34px; }
+  .sx .bp { font: 800 10.5px Inter; letter-spacing: .06em; padding: 3px 7px; border-radius: 6px; }
+  .bp.BULLISH { color: var(--buy); background: var(--buy-bg); } .bp.BEARISH { color: var(--sell); background: var(--sell-bg); }
+  .bp.NEUTRAL { color: var(--muted); background: var(--panel); }
+  .sx .sm { font-size: 12px; color: var(--muted); flex: 1; }
+  .sx .new { font: 800 10px Inter; color: #04101f; background: var(--wait); border-radius: 5px; padding: 2px 6px; }
+  .sxb { padding: 10px 12px 12px; font-size: 13px; line-height: 1.5; }
+  .sxb h5 { margin: 10px 0 4px; font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+  .sxb h5:first-child { margin-top: 0; }
+  .swr { display: flex; flex-wrap: wrap; gap: 5px; }
+  .swr span { font: 600 11.5px var(--mono); padding: 3px 6px; border-radius: 6px; background: var(--panel-2); border: 1px solid var(--line); }
+  .swr span b { font-family: Inter; margin-right: 4px; }
+  .swr .HH b, .swr .HL b { color: var(--buy); } .swr .LH b, .swr .LL b { color: var(--sell); }
+  .poi { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 7px 0; border-top: 1px dashed var(--line); }
+  .poi:first-of-type { border-top: 0; }
+  .poi .rg { font: 700 12.5px var(--mono); }
+  .poi small { grid-column: 1 / -1; color: var(--faint); font-size: 11.5px; }
+  .pbar { width: 74px; height: 6px; background: var(--panel-2); border-radius: 99px; overflow: hidden; margin-top: 5px; }
+  .pbar i { display: block; height: 100%; background: var(--accent); }
+  .plan { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 4px; }
+  .plan div { background: var(--panel-2); border-radius: 8px; padding: 6px 8px; font: 700 12.5px var(--mono); }
+  .plan div small { display: block; font: 600 9.5px Inter; color: var(--faint); text-transform: uppercase; letter-spacing: .06em; }
+  .plan .e { color: var(--accent); } .plan .s { color: var(--sell); } .plan .t { color: var(--buy); }
+  .pst { font: 700 10.5px Inter; padding: 2px 6px; border-radius: 5px; background: var(--panel); color: var(--muted); }
+  .pst.ok { color: var(--buy); background: var(--buy-bg); } .pst.no { color: var(--sell); background: var(--sell-bg); }
+  @media (max-width: 420px) { .plan { grid-template-columns: repeat(2, 1fr); } }
 </style>
 </head>
 <body>
@@ -386,6 +416,8 @@ function render(r) {
       <div class="step"><div class="tf">${esc(x.tf)}</div><div class="d"><b>${esc(x.role)}</b> · ${esc(x.detail)}</div>
       <span class="dir ${x.dir}">${x.dir}</span></div>`).join("")}</div></div>`;
 
+  html += structureHTML(r);
+
   if (trade) {
     const t = r.trade;
     html += `<div class="order"><div class="ohead"><b class="${r.side === "BUY" ? "buy" : "sell"}">Option A · ${r.side} now (market)</b><span>${esc(r.playbook)}</span></div>
@@ -400,7 +432,8 @@ function render(r) {
   }
   if (r.limit) {
     const p = r.limit, buy = p.side.startsWith("BUY");
-    html += `<div class="order"><div class="ohead"><b class="${buy ? "buy" : "sell"}">${trade ? "Option B · " : ""}${p.side}</b><span>${p.distance} from price</span></div>
+    html += `<div class="order"><div class="ohead"><b class="${buy ? "buy" : "sell"}">${trade ? "Option B · " : ""}${p.side}${p.rule === "structure" ? " · " + esc(p.from_tf) + " structure" : ""}</b><span>${p.distance} from price</span></div>
+      ${p.rule === "structure" ? `<div class="section" style="border-bottom:0;padding:8px 18px 0"><div class="muted">Entry at the ${esc(p.zone)} · stop ${esc(p.sl_reason)} · target ${esc(p.tp_reason)} · reaction chance ≈${p.probability}%. Levels stay fixed until the next ${esc(p.from_tf)} BOS/CHoCH.</div></div>` : ""}
       <div class="section" style="border-bottom:0;padding:8px 18px 0"><div class="muted">Zone ${p.zone_bot} – ${p.zone_top}: ${esc(p.zone)}${p.discount ? " · in discount" : ""}</div></div>
       <div class="levels">${lv(buy ? "Buy limit" : "Sell limit", p.entry, "at the zone")}${lv("Lot size", p.lot_size, "risk $" + p.risk_amount)}
       ${lv("Stop loss", p.stop_loss, "beyond the zone", "sl")}${lv("Take profit", p.take_profit_1, p.rr_tp1 + (p.single_tp ? " · close all" : " · half off"), "tp")}
@@ -433,6 +466,54 @@ function render(r) {
     navigator.clipboard && navigator.clipboard.writeText(el.dataset.copy);
     el.classList.add("copied"); setTimeout(() => el.classList.remove("copied"), 1200);
   });
+}
+
+// ---------- market structure per timeframe ----------
+let structSeen = store.get("structSeen", {});
+function structureHTML(r) {
+  if (!r.structure) return "";
+  const d = r.digits, f = v => v == null ? "–" : (+v).toFixed(d);
+  const ago = iso => { try { const m = (Date.now() - new Date(iso)) / 60000; return m < 90 ? Math.round(m) + " min ago" : m < 2160 ? Math.round(m / 60) + "h ago" : Math.round(m / 1440) + " days ago"; } catch { return ""; } };
+  const changed = [];
+  let html = `<div class="section"><h3>Market structure — every timeframe</h3>
+    <div class="muted" style="margin-bottom:4px">Top-down: <b>${esc(r.structure_bias)}</b> · ${esc(r.structure_bias_text)}.
+    Levels are fixed and only change when a new BOS/CHoCH closes on that timeframe.</div>`;
+  r.structure.forEach((x, n) => {
+    const key = `${r.symbol}|${r.entry_tf}|${x.tf}`;
+    const isNew = x.id && structSeen[key] && structSeen[key] !== x.id;
+    if (x.id && structSeen[key] !== x.id) { if (structSeen[key]) changed.push(x); structSeen[key] = x.id; }
+    const ev = x.event, mv = x.movement, pl = x.plan;
+    const open = n === 2 || isNew ? " open" : "";
+    html += `<details class="sx"${open}><summary><span class="tfb">${esc(x.tf)}</span><span class="bp ${x.bias}">${x.bias}</span>
+      <span class="sm">${ev ? `${esc(ev.kind)} ${ev.dir === "up" ? "↑" : "↓"} ${f(ev.price)} · ${mv ? esc(mv.phase) : ""}` : "no break yet"}</span>
+      ${isNew ? '<span class="new">NEW</span>' : ""}</summary><div class="sxb">
+      <h5>Bias</h5><div>${esc(x.reason)}</div>`;
+    if (ev) html += `<h5>Last ${esc(ev.kind)}</h5><div><b>${ev.kind} ${ev.dir}</b> at <b style="font-family:var(--mono)">${f(ev.price)}</b> · closed ${ago(ev.time)} (broke the ${esc(ev.broke)})
+        ${x.history && x.history.length ? `<div class="muted" style="font-size:11.5px">Before: ${x.history.slice().reverse().map(h => `${h.kind} ${h.dir} ${f(h.price)}`).join(" · ")}</div>` : ""}</div>`;
+    if (x.swings && x.swings.length) html += `<h5>Swing points</h5><div class="swr">${x.swings.map(s => `<span class="${s.label}"><b>${s.label}</b>${f(s.price)}</span>`).join("")}</div>`;
+    if (x.key) html += `<div class="muted" style="font-size:12px;margin-top:5px">Protected ${esc(x.key.origin_label)} <b>${f(x.key.origin)}</b>${x.key.extreme != null ? ` · ${esc(x.key.extreme_label)} <b>${f(x.key.extreme)}</b>` : ` · ${x.dir > 0 ? "HH" : "LL"} not confirmed yet`}</div>`;
+    if (mv) html += `<h5>Movement</h5><div>${esc(mv.text)} <span class="pst ${mv.supports ? "ok" : "no"}">${mv.supports ? "supports the bias" : "against the bias"}</span></div>`;
+    if (x.pois && x.pois.length) {
+      html += `<h5>Points of interest</h5>` + x.pois.map(p => `<div class="poi"><div><b>${esc(p.type)}</b> <span class="rg">${f(p.bot)} – ${f(p.top)}</span>
+          <span class="pst ${p.status === "fresh" ? "ok" : p.status === "invalid" ? "no" : ""}">${p.status === "invalid" ? "broken" : p.status}</span></div>
+        <div style="text-align:right"><b>≈${p.probability}%</b><div class="pbar"><i style="width:${p.probability}%"></i></div></div>
+        <small>${esc(p.confluence.join(" · "))} — ${esc(p.probability_basis)}</small></div>`).join("");
+    } else if (x.event) html += `<h5>Points of interest</h5><div class="muted">${esc(x.no_plan || "No valid zone (needs displacement, an unbroken zone and 2+ confluences).")}</div>`;
+    if (x.confirmations && x.confirmations.length)
+      html += `<div class="muted" style="font-size:11.5px;margin-top:4px">FVG confirmation: ${x.confirmations.map(c => `${f(c.bot)}–${f(c.top)}`).join(" · ")}</div>`;
+    if (pl) {
+      const buy = pl.dir > 0;
+      html += `<h5>Plan · ${esc(pl.side)} <span class="pst ${pl.valid ? "ok" : "no"}">${pl.valid ? pl.status : (pl.status === "forming" ? "forming" : "not valid")}</span></h5>
+        <div class="plan"><div class="e"><small>Entry (${esc(pl.zone.replace("Order block ", "OB "))})</small>${f(pl.entry)}</div>
+        <div class="s"><small>Stop loss</small>${f(pl.stop_loss)}</div><div class="t"><small>Take profit</small>${pl.take_profit != null ? f(pl.take_profit) : "pending"}</div>
+        <div><small>Risk : reward</small>${pl.rr != null ? "1:" + pl.rr : "–"}</div></div>
+        <div class="muted" style="font-size:11.5px;margin-top:4px">SL ${esc(pl.sl_reason)}${pl.tp_reason ? " · TP at the " + esc(pl.tp_reason) : ""}${pl.notes.length ? " · " + esc(pl.notes.join(" ")) : ""}</div>`;
+    }
+    html += `</div></details>`;
+  });
+  store.set("structSeen", structSeen);
+  if (changed.length) setTimeout(() => changed.forEach(x => notify(`${r.symbol} ${x.tf}: new ${x.event.kind} ${x.event.dir} at ${f(x.event.price)} — ${x.tf} structure is now ${x.bias.toLowerCase()}, plan updated`, x.dir)), 50);
+  return html + `</div>`;
 }
 
 function renderJournal() {

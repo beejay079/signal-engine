@@ -31,3 +31,17 @@ candles are used only after they close. Spread ($0.30) is charged on every trade
 - Gold in 2026 behaves differently from 2018 (much more volatile). Results can differ either way — that is why the journal matters.
 
 Rerun: `python3 backtest.py candles.csv XAU/USD 15min` (csv columns: time, open, high, low, close; 1-minute data).
+
+## New: market-structure order block rule (structure.py)
+
+The pending order now comes from market structure on each timeframe: entry at the best order block,
+stop loss beyond the protected Higher Low / Lower High, take profit at the previous Higher High / Lower Low.
+**This rule has not been backtested on real gold yet.** Treat it as untested and use a demo account.
+
+The POI reaction percentages are **estimates** (35–65%) until you measure them:
+
+    python3 calibrate_poi.py candles.csv XAU/USD 15min 1h
+
+That writes `poi_stats.json`. Upload it with the site files and the page shows measured rates instead.
+For reference: on random (fake) price data, zones "react" (+1R before price closes through them) about
+50% of the time — a POI only adds value if it does clearly better than that on real data.

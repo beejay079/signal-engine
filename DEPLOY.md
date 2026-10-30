@@ -9,6 +9,23 @@
 
 Your `TWELVE_DATA_API_KEY` and `APP_PASSWORD` stay as they are.
 
+**New in this version:** `structure.py` (market structure on every timeframe) and `calibrate_poi.py`
+(optional - measures real POI reaction rates). Make sure both are uploaded.
+
+### Market structure — every timeframe
+For each of the 4 timeframes the page shows: bias and why, the last BOS/CHoCH with its exact price and time,
+the swing points (HH / HL / LH / LL), impulsive or corrective movement, valid POIs (order blocks, liquidity
+sweep, supply/demand base; FVG only as confirmation) with exact ranges and a reaction estimate, and a plan:
+**limit at the best order block, stop below the HL (buy) / above the LH (sell), take profit at the previous HH / LL**.
+
+**Levels are fixed.** They are built from closed candles around the last BOS/CHoCH and judged once, 4 candles
+after the break. They change only when a new BOS/CHoCH closes on that timeframe - then that timeframe is
+re-read, marked **NEW**, and (with *Watch* on) you get an alert. The take profit appears once the HH/LL is
+confirmed (a pullback has started); until then the plan shows *forming*.
+
+The pending order on the main card uses the setup timeframe's plan (then the entry, then the middle timeframe)
+only when it agrees with the top-down structure bias. This order rule is **not backtested yet** - see BACKTEST.md.
+
 ---
 
 # First-time setup (no code, ~15 minutes)

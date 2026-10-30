@@ -36,6 +36,7 @@ import numpy as np
 import pandas as pd
 
 import signal_engine as se
+import structure as stx
 
 # entry timeframe -> (top bias TF, mid bias TF, setup TF)
 STACKS = {
@@ -59,6 +60,8 @@ TESTED = {
                "15min": "Tested on real gold (2018): 13 trades, 38% won, average -0.15R after spread.",
                "1min": "Not tested on 1M. On 5M market entries lost (-0.46R per trade).",
                "1h": "Not tested on 1H (not enough data)."},
+    "structure": "The order-block rule (entry at the OB, stop beyond the HL/LH, target the HH/LL) has not been "
+                 "backtested on real gold yet. Treat it as untested.",
     "summary": "No proven edge yet: in testing these setups were close to a coin flip, and the spread made them lose. "
                "Use a demo account and your journal before risking money.",
 }
@@ -89,6 +92,8 @@ DEFAULTS = dict(
     lim_full_close=True,
     lim_min_room=1.0,        # need room to the target liquidity
     lim_expiry_min=120,      # cancel if not filled in 2 hours (x2 on 1h entries)
+    limit_rule="structure",  # "structure": OB entry, SL beyond HL/LH, TP at HH/LL (fixed until next BOS/CHoCH)
+                             # "zone": the older tested zone rule (used by backtest.py)
     playbooks=None,       # None = all; or a tuple of names
 )
 
@@ -720,6 +725,40 @@ def limit_setup(view, price, atr_e, now, P):
     return None, why
 
 
+def stx_word(d):
+    return {1: "bullish", -1: "bearish", 0: "neutral"}[int(d)]
+
+
+def structure_limit(view, reads, bias, bias_txt, now):
+    """The pending order from market structure: entry at the best OB, SL beyond the HL/LH, TP at the HH/LL.
+    Uses the setup timeframe first, then the middle one. Levels come straight from structure.py (fixed)."""
+    if not bias:
+        return None, f"no top-down structure agreement ({bias_txt})"
+    why = []
+    for x in reads:
+        pl = x.get("plan")
+        if not pl:
+            why.append(f"{x['tf']}: {x.get('no_plan') or 'no plan'}")
+            continue
+        if pl["dir"] != bias:
+            why.append(f"{x['tf']} structure is {x['bias'].lower()}, against the top-down bias")
+            continue
+        if not pl["valid"] or pl["status"] not in ("waiting",):
+            why.append(f"{x['tf']}: " + (pl["notes"][0] if pl["notes"] else f"plan is {pl['status']}"))
+            continue
+        d, k = pl["dir"], x["key"]
+        dist = abs(pl["entry"] - pl["stop_loss"])
+        lim = dict(side=d, entry=pl["entry"], sl=pl["stop_loss"], tp1=pl["take_profit"], tp2=pl["take_profit"], dist=dist,
+                   zone_top=pl["zone_top"], zone_bot=pl["zone_bot"], zone=f"{x['tf']} {pl['zone']}",
+                   confluence=len(next((p["confluence"] for p in x["pois"] if p["type"] == pl["zone"]), [])),
+                   discount=True, expires=now + timedelta(days=7), invalidation=k["origin"], target=pl["take_profit"],
+                   rule="structure", tf=x["tf"], rr=pl["rr"], probability=pl["probability"],
+                   sl_reason=pl["sl_reason"], tp_reason=pl["tp_reason"], structure_id=x["id"],
+                   sl_label=k["origin_label"], anchor=k["origin"], tp_label=k["extreme_label"])
+        return lim, None
+    return None, "; ".join(why) if why else "no valid structure plan"
+
+
 # --------------------------------------------------------------------------
 # TRADE TRACKING
 # --------------------------------------------------------------------------
@@ -909,7 +948,21 @@ def analyse(symbol, entry_tf, frames, balance=100.0, risk_pct=1.0, cent=False, t
     lo_win, hi_win = float(edf["low"].iloc[-win - 1:].min()), float(edf["high"].iloc[-win - 1:].max())
 
     ms = market_setup(view, e, price, lo_win, hi_win, now, P)
-    lim, lim_why = limit_setup(view, price, e.atr_now, now, P) if P["limit_on"] else (None, "off")
+    top_tf, mid_tf, setup_tf = view.tfs
+    T = stx.analyse_tf(view.t, L["top"], symbol)
+    M = stx.analyse_tf(view.m, L["mid"], symbol, T["dir"], L["top"])
+    Sx = stx.analyse_tf(view.s, L["setup"], symbol, M["dir"] or T["dir"], L["mid"])
+    Ex = stx.analyse_tf(e, L["entry"], symbol, Sx["dir"], L["setup"])
+    for x, role in ((T, "Bias"), (M, "Bias"), (Sx, "Setup"), (Ex, "Entry")):
+        x["role"] = role
+    s_bias = T["dir"] if T["dir"] and M["dir"] in (0, T["dir"]) else (M["dir"] if not T["dir"] else 0)
+    s_bias_txt = (f"{L['top']} and {L['mid']} structure both {stx_word(s_bias)}" if s_bias and T["dir"] == M["dir"]
+                  else f"{L['top']} {stx_word(T['dir'])}, {L['mid']} {stx_word(M['dir'])}" if s_bias
+                  else f"{L['top']} {stx_word(T['dir'])} vs {L['mid']} {stx_word(M['dir'])} - no top-down agreement")
+    if P["limit_on"] and P["limit_rule"] == "structure":
+        lim, lim_why = structure_limit(view, (Sx, Ex, M), s_bias, s_bias_txt, now)
+    else:
+        lim, lim_why = limit_setup(view, price, e.atr_now, now, P) if P["limit_on"] else (None, "off")
     story = market_story(view, price, now)
 
     warnings, reasons = [], list(ms["hard"])
@@ -930,7 +983,8 @@ def analyse(symbol, entry_tf, frames, balance=100.0, risk_pct=1.0, cent=False, t
                        detail=f"{view.s_regime.lower()}, {S['phase']}" + (f" {S['retrace']:.0%}" if S["phase"] == "pullback" else "")))
     ladder.append(dict(tf=L["entry"], role="Entry", dir=side_word(e.structure), detail=f"{ms['e_regime'].lower()} ({ms['e_regime_why']})"))
 
-    result = dict(symbol=symbol, entry_tf=entry_tf, price=round(price, dg), digits=dg, time_utc=now.strftime("%Y-%m-%d %H:%M"),
+    result = dict(structure=[T, M, Sx, Ex], structure_bias=side_word(s_bias), structure_bias_text=s_bias_txt,
+                  symbol=symbol, entry_tf=entry_tf, price=round(price, dg), digits=dg, time_utc=now.strftime("%Y-%m-%d %H:%M"),
                   tested=dict(limit=TESTED["limit"].get(entry_tf), market=TESTED["market"].get(entry_tf), summary=TESTED["summary"]),
                   stack=L, bias=side_word(view.bias), bias_text=view.bias_txt, story=story, ladder=ladder,
                   regime=view.s_regime, session=ms["sess"], warnings=warnings, reasons=reasons,
@@ -996,20 +1050,29 @@ def analyse(symbol, entry_tf, frames, balance=100.0, risk_pct=1.0, cent=False, t
 
     if lim and not active and not result.get("status") == "NO TRADE":
         d = lim["side"]
-        tr = new_trade(view, "limit", d, lim, now, "Pullback limit",
+        tr = new_trade(view, "limit", d, lim, now, "Structure OB limit" if lim.get("rule") == "structure" else "Pullback limit",
                        extra=dict(expires=iso(lim["expires"]), zone_top=lim["zone_top"], zone_bot=lim["zone_bot"],
                                   full_close=P["lim_full_close"]))
         pk = pack(lim)
-        pk["rr_tp1"] = f"1:{P['lim_tp_r']:g}"
+        pk["rr_tp1"] = f"1:{lim['rr']:.2f}" if lim.get("rr") else f"1:{P['lim_tp_r']:g}"
+        structural = lim.get("rule") == "structure"
         result["limit"] = dict(side="BUY LIMIT" if d == 1 else "SELL LIMIT", **pk, single_tp=P["lim_full_close"],
                                zone=lim["zone"], zone_top=round(lim["zone_top"], dg), zone_bot=round(lim["zone_bot"], dg),
                                confluence=lim["confluence"], discount=lim["discount"],
                                distance=round(abs(price - lim["entry"]), dg),
-                               expires=lim["expires"].strftime("%H:%M UTC"),
-                               cancel_if=[f"price reaches the target {fmt(lim['tp2'], dg)} before filling",
-                                          f"{L['setup']} structure turns {side_word(-d).lower()}",
-                                          f"not filled by {lim['expires'].strftime('%H:%M UTC')}"],
+                               expires="next BOS/CHoCH" if structural else lim["expires"].strftime("%H:%M UTC"),
+                               cancel_if=([f"price reaches the {lim['tp_label']} {fmt(lim['tp1'], dg)} before filling",
+                                           f"a {lim['tf']} CHoCH {'down' if d == 1 else 'up'} (structure turns {side_word(-d).lower()})",
+                                           f"a candle closes {'below' if d == 1 else 'above'} the {lim['sl_label']} {fmt(lim['anchor'], dg)}"]
+                                          if structural else
+                                          [f"price reaches the target {fmt(lim['tp2'], dg)} before filling",
+                                           f"{L['setup']} structure turns {side_word(-d).lower()}",
+                                           f"not filled by {lim['expires'].strftime('%H:%M UTC')}"]),
+                               rule=lim.get("rule", "zone"), from_tf=lim.get("tf"), probability=lim.get("probability"),
+                               sl_reason=lim.get("sl_reason"), tp_reason=lim.get("tp_reason"), structure_id=lim.get("structure_id"),
                                new_trade=tr)
     elif not lim:
         result["limit_note"] = f"No limit order: {lim_why}."
+    if lim and lim.get("rule") == "structure":
+        result["tested"]["limit"] = TESTED["structure"]
     return result
