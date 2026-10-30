@@ -433,7 +433,7 @@ function render(r) {
   if (r.limit) {
     const p = r.limit, buy = p.side.startsWith("BUY");
     html += `<div class="order"><div class="ohead"><b class="${buy ? "buy" : "sell"}">${trade ? "Option B · " : ""}${p.side}${p.rule === "structure" ? " · " + esc(p.from_tf) + " structure" : ""}</b><span>${p.distance} from price</span></div>
-      ${p.rule === "structure" ? `<div class="section" style="border-bottom:0;padding:8px 18px 0"><div class="muted">Entry at the ${esc(p.zone)} · stop ${esc(p.sl_reason)} · target ${esc(p.tp_reason)} · reaction chance ≈${p.probability}%. Levels stay fixed until the next ${esc(p.from_tf)} BOS/CHoCH.</div></div>` : ""}
+      ${p.rule === "structure" ? `<div class="section" style="border-bottom:0;padding:8px 18px 0"><div class="muted">Entry at the ${esc(p.zone)} · stop ${esc(p.sl_reason)} · target ${esc(p.tp_reason)} · zone reaction ${p.probability}% (measured) · R:R ${esc(p.rr_tp1)}. Levels stay fixed until the next ${esc(p.from_tf)} BOS/CHoCH.</div></div>` : ""}
       <div class="section" style="border-bottom:0;padding:8px 18px 0"><div class="muted">Zone ${p.zone_bot} – ${p.zone_top}: ${esc(p.zone)}${p.discount ? " · in discount" : ""}</div></div>
       <div class="levels">${lv(buy ? "Buy limit" : "Sell limit", p.entry, "at the zone")}${lv("Lot size", p.lot_size, "risk $" + p.risk_amount)}
       ${lv("Stop loss", p.stop_loss, "beyond the zone", "sl")}${lv("Take profit", p.take_profit_1, p.rr_tp1 + (p.single_tp ? " · close all" : " · half off"), "tp")}
@@ -470,6 +470,7 @@ function render(r) {
 
 // ---------- market structure per timeframe ----------
 let structSeen = store.get("structSeen", {});
+let structHist = store.get("structHist", {});        // your record of previous setups, per market/timeframe
 function structureHTML(r) {
   if (!r.structure) return "";
   const d = r.digits, f = v => v == null ? "–" : (+v).toFixed(d);
@@ -477,42 +478,64 @@ function structureHTML(r) {
   const changed = [];
   let html = `<div class="section"><h3>Market structure — every timeframe</h3>
     <div class="muted" style="margin-bottom:4px">Top-down: <b>${esc(r.structure_bias)}</b> · ${esc(r.structure_bias_text)}.
-    Levels are fixed and only change when a new BOS/CHoCH closes on that timeframe.</div>`;
+    Each timeframe is read on its own candles. Levels stay fixed until a new BOS/CHoCH on that timeframe,
+    or until the setup is completed or invalidated.</div>`;
   r.structure.forEach((x, n) => {
-    const key = `${r.symbol}|${r.entry_tf}|${x.tf}`;
+    const key = `${r.symbol}|${x.tf}`;
+    const pl = x.plan, ev = x.event, mv = x.movement;
+    // ---- record keeping: snapshot each structure, keep the last status, archive it when a new one replaces it
+    const hist = structHist[key] = structHist[key] || [];
+    const snap = { id: x.id, bias: x.bias, event: ev ? `${ev.kind} ${ev.dir} ${f(ev.price)}` : "no break",
+      plan: pl ? `${pl.side} ${f(pl.entry)} · SL ${f(pl.stop_loss)} · TP ${pl.take_profit != null ? f(pl.take_profit) : "pending"}${pl.rr ? " · 1:" + pl.rr : ""}` : null,
+      decision: pl ? pl.decision : null, status: pl ? pl.status : x.bias.toLowerCase(), seen: new Date().toISOString() };
     const isNew = x.id && structSeen[key] && structSeen[key] !== x.id;
     if (x.id && structSeen[key] !== x.id) { if (structSeen[key]) changed.push(x); structSeen[key] = x.id; }
-    const ev = x.event, mv = x.movement, pl = x.plan;
+    if (x.id) {
+      const cur = hist.find(h => h.id === x.id);
+      if (cur) Object.assign(cur, { status: snap.status, decision: snap.decision, plan: snap.plan || cur.plan, last: snap.seen });
+      else hist.unshift(snap);
+      structHist[key] = hist.slice(0, 15);
+    }
     const open = n === 2 || isNew ? " open" : "";
+    const dec = pl ? `<span class="pst ${pl.decision === "TRADE" ? "ok" : pl.decision === "IN TRADE" ? "ok" : "no"}">${esc(pl.decision)}</span>` : "";
     html += `<details class="sx"${open}><summary><span class="tfb">${esc(x.tf)}</span><span class="bp ${x.bias}">${x.bias}</span>
-      <span class="sm">${ev ? `${esc(ev.kind)} ${ev.dir === "up" ? "↑" : "↓"} ${f(ev.price)} · ${mv ? esc(mv.phase) : ""}` : "no break yet"}</span>
-      ${isNew ? '<span class="new">NEW</span>' : ""}</summary><div class="sxb">
-      <h5>Bias</h5><div>${esc(x.reason)}</div>`;
-    if (ev) html += `<h5>Last ${esc(ev.kind)}</h5><div><b>${ev.kind} ${ev.dir}</b> at <b style="font-family:var(--mono)">${f(ev.price)}</b> · closed ${ago(ev.time)} (broke the ${esc(ev.broke)})
+      <span class="sm">${ev ? `${esc(ev.kind)} ${ev.dir === "up" ? "↑" : "↓"} ${f(ev.price)}${mv ? " · " + esc(mv.phase) : ""}` : "no break yet"}</span>
+      ${isNew ? '<span class="new">NEW</span>' : dec}</summary><div class="sxb">
+      <h5>Direction</h5><div>${esc(x.reason)}</div>
+      ${x.alignment ? `<div style="margin-top:4px"><span class="pst ${x.alignment.agrees ? "ok" : "no"}">${esc(x.alignment.text)}</span></div>` : ""}`;
+    if (ev) html += `<h5>Last ${esc(ev.kind)}</h5><div><b>${ev.kind} ${ev.dir}</b> at <b style="font-family:var(--mono)">${f(ev.price)}</b> · ${ago(ev.time)} (broke the ${esc(ev.broke)})
         ${x.history && x.history.length ? `<div class="muted" style="font-size:11.5px">Before: ${x.history.slice().reverse().map(h => `${h.kind} ${h.dir} ${f(h.price)}`).join(" · ")}</div>` : ""}</div>`;
     if (x.swings && x.swings.length) html += `<h5>Swing points</h5><div class="swr">${x.swings.map(s => `<span class="${s.label}"><b>${s.label}</b>${f(s.price)}</span>`).join("")}</div>`;
-    if (x.key) html += `<div class="muted" style="font-size:12px;margin-top:5px">Protected ${esc(x.key.origin_label)} <b>${f(x.key.origin)}</b>${x.key.extreme != null ? ` · ${esc(x.key.extreme_label)} <b>${f(x.key.extreme)}</b>` : ` · ${x.dir > 0 ? "HH" : "LL"} not confirmed yet`}</div>`;
-    if (mv) html += `<h5>Movement</h5><div>${esc(mv.text)} <span class="pst ${mv.supports ? "ok" : "no"}">${mv.supports ? "supports the bias" : "against the bias"}</span></div>`;
+    if (x.key) html += `<div class="muted" style="font-size:12px;margin-top:5px">Protected ${esc(x.key.origin_label)} <b>${f(x.key.origin)}</b>${x.key.extreme != null ? ` · ${esc(x.key.extreme_label)} <b>${f(x.key.extreme)}</b>` : ` · ${ev && ev.dir === "up" ? "HH" : "LL"} not confirmed yet`}</div>`;
+    if (mv) html += `<h5>Movement</h5><div>${esc(mv.text)} <span class="pst ${mv.reversal ? "no" : "ok"}">${mv.reversal ? "possible reversal" : "supports the direction"}</span></div>`;
     if (x.pois && x.pois.length) {
       html += `<h5>Points of interest</h5>` + x.pois.map(p => `<div class="poi"><div><b>${esc(p.type)}</b> <span class="rg">${f(p.bot)} – ${f(p.top)}</span>
           <span class="pst ${p.status === "fresh" ? "ok" : p.status === "invalid" ? "no" : ""}">${p.status === "invalid" ? "broken" : p.status}</span></div>
-        <div style="text-align:right"><b>≈${p.probability}%</b><div class="pbar"><i style="width:${p.probability}%"></i></div></div>
-        <small>${esc(p.confluence.join(" · "))} — ${esc(p.probability_basis)}</small></div>`).join("");
-    } else if (x.event) html += `<h5>Points of interest</h5><div class="muted">${esc(x.no_plan || "No valid zone (needs displacement, an unbroken zone and 2+ confluences).")}</div>`;
+        <div style="text-align:right">${p.probability != null ? `<b>${p.probability}%</b><div class="pbar"><i style="width:${p.probability}%"></i></div>` : `<small class="muted">not measured</small>`}</div>
+        <small>${esc(p.confluence.join(" · "))}<br>Reaction: ${esc(p.probability_basis)}</small></div>`).join("");
+    } else if (x.note || ev) html += `<h5>Points of interest</h5><div class="muted">${esc(x.note || "No valid zone in this leg.")}</div>`;
     if (x.confirmations && x.confirmations.length)
       html += `<div class="muted" style="font-size:11.5px;margin-top:4px">FVG confirmation: ${x.confirmations.map(c => `${f(c.bot)}–${f(c.top)}`).join(" · ")}</div>`;
     if (pl) {
-      const buy = pl.dir > 0;
-      html += `<h5>Plan · ${esc(pl.side)} <span class="pst ${pl.valid ? "ok" : "no"}">${pl.valid ? pl.status : (pl.status === "forming" ? "forming" : "not valid")}</span></h5>
+      html += `<h5>Plan · ${esc(pl.side)} ${dec} <span class="pst">${esc(pl.status)}</span></h5>
         <div class="plan"><div class="e"><small>Entry (${esc(pl.zone.replace("Order block ", "OB "))})</small>${f(pl.entry)}</div>
         <div class="s"><small>Stop loss</small>${f(pl.stop_loss)}</div><div class="t"><small>Take profit</small>${pl.take_profit != null ? f(pl.take_profit) : "pending"}</div>
-        <div><small>Risk : reward</small>${pl.rr != null ? "1:" + pl.rr : "–"}</div></div>
-        <div class="muted" style="font-size:11.5px;margin-top:4px">SL ${esc(pl.sl_reason)}${pl.tp_reason ? " · TP at the " + esc(pl.tp_reason) : ""}${pl.notes.length ? " · " + esc(pl.notes.join(" ")) : ""}</div>`;
+        <div><small>Risk : reward</small>${pl.rr != null ? "1:" + pl.rr : "–"}${pl.rr_after_spread != null ? `<small>1:${pl.rr_after_spread} after spread</small>` : ""}</div></div>
+        <div class="muted" style="font-size:11.5px;margin-top:4px">SL ${esc(pl.sl_reason)}${pl.tp_reason ? " · TP at the " + esc(pl.tp_reason) : ""}${pl.probability != null ? ` · zone reaction ${pl.probability}%` : ""}</div>
+        ${pl.reasons.length ? `<ul class="plain" style="margin-top:6px">${pl.reasons.map(w => `<li>${esc(w)}</li>`).join("")}</ul>` : ""}`;
     }
+    if (x.calibration && x.calibration.rule) {
+      const ru = x.calibration.rule;
+      html += `<div class="muted" style="font-size:11.5px;margin-top:6px">This exact order rule on ${esc(x.calibration.span)}:
+        <b>${ru.trades}</b> trades, ${ru.win_rate}% won, <b class="${ru.avg_r > 0 ? "pos" : "neg"}">${ru.avg_r > 0 ? "+" : ""}${ru.avg_r}R</b> per trade.</div>`;
+    }
+    const prev = hist.filter(h => h.id !== x.id).slice(0, 5);
+    if (prev.length) html += `<h5>Previous setups</h5>` + prev.map(h => `<div class="muted" style="font-size:11.5px;padding:2px 0">${esc(h.event)} · ${esc(h.bias.toLowerCase())}${h.plan ? " · " + esc(h.plan) : ""}
+        → <b>${esc(h.status || "")}</b>${h.decision ? " (" + esc(h.decision) + ")" : ""} · ${ago(h.seen)}</div>`).join("");
     html += `</div></details>`;
   });
-  store.set("structSeen", structSeen);
-  if (changed.length) setTimeout(() => changed.forEach(x => notify(`${r.symbol} ${x.tf}: new ${x.event.kind} ${x.event.dir} at ${f(x.event.price)} — ${x.tf} structure is now ${x.bias.toLowerCase()}, plan updated`, x.dir)), 50);
+  store.set("structSeen", structSeen); store.set("structHist", structHist);
+  if (changed.length) setTimeout(() => changed.forEach(x => notify(`${r.symbol} ${x.tf}: new ${x.event.kind} ${x.event.dir} at ${f(x.event.price)} — ${x.tf} is now ${x.bias.toLowerCase()}, levels updated`, x.dir || 1)), 50);
   return html + `</div>`;
 }
 

@@ -38,6 +38,34 @@ PAGE = Path(__file__).with_name("index.html")
 # seconds a timeframe's candles are reused before fetching again
 CACHE_TTL = {"1min": 20, "5min": 60, "15min": 120, "1h": 300, "4h": 900, "1day": 1800, "1week": 3600}
 _cache: dict = {}
+HISTORY = 5000                       # candles used to measure the rules on each timeframe (still 1 credit)
+CALIB_TTL = 6 * 3600                 # re-measure every 6 hours
+_calib: dict = {}
+
+
+def calibrations(symbol, entry_tf, key, demo=None):
+    """Measured POI reaction rates + rule results for each timeframe (cached). At most 2 new per request."""
+    import calib
+    top, mid, setup = td.STACKS[entry_tf]
+    out, fresh = {}, 0
+    for role, tf in (("setup", setup), ("entry", entry_tf), ("mid", mid), ("top", top)):
+        k = (symbol, tf)
+        hit = _calib.get(k)
+        if hit and time.time() - hit[0] < CALIB_TTL:
+            out[role] = hit[1]
+            continue
+        if fresh >= 2:                      # spread the history downloads over requests (8 credits/min)
+            out[role] = hit[1] if hit else None
+            continue
+        try:
+            df = demo[role] if demo is not None else se.fetch_candles(symbol, tf, key, HISTORY)
+            res = calib.compute(df.iloc[:-1], symbol, td.LABEL[tf])
+            _calib[k] = (time.time(), res)
+            out[role] = res
+            fresh += 1
+        except Exception:
+            out[role] = hit[1] if hit else None
+    return out
 DEMO_START = {"XAU/USD": 2650, "EUR/USD": 1.08, "GBP/USD": 1.27, "USD/JPY": 150, "BTC/USD": 65000}
 
 
@@ -50,7 +78,7 @@ def candles(symbol: str, tf: str, key: str, size: int):
     return df
 
 
-def demo_frames(symbol, entry_tf):
+def demo_frames(symbol, entry_tf, size=None):
     """One fake series resampled to every timeframe, so the charts agree."""
     top, mid, setup = td.STACKS[entry_tf]
     step = se.TF_MINUTES[entry_tf]                         # base candle size
@@ -76,8 +104,8 @@ def demo_frames(symbol, entry_tf):
             dict(open="first", high="max", low="min", close="last")).dropna()
         return df.iloc[-size:]
 
-    return dict(entry=rs(entry_tf, td.SIZES["entry"]), setup=rs(setup, td.SIZES["setup"]),
-                mid=rs(mid, td.SIZES["mid"]), top=rs(top, td.SIZES["top"]))
+    return dict(entry=rs(entry_tf, size or td.SIZES["entry"]), setup=rs(setup, size or td.SIZES["setup"]),
+                mid=rs(mid, size or td.SIZES["mid"]), top=rs(top, size or td.SIZES["top"]))
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -122,10 +150,11 @@ def signal(req: Req, x_app_password: str | None = Header(default=None)):
                           top=candles(symbol, top, key, td.SIZES["top"]))
         else:
             frames = demo_frames(symbol, tf)
+        cal = calibrations(symbol, tf, key, demo=None if key else demo_frames(symbol, tf, size=HISTORY))
         for name, df in frames.items():
             if len(df) < 120:
                 raise RuntimeError(f"Not enough {name} candles from the data feed ({len(df)}).")
-        result = td.analyse(symbol, tf, frames, balance, risk, cent, trades=req.trades)
+        result = td.analyse(symbol, tf, frames, balance, risk, cent, trades=req.trades, calibs=cal)
         result["demo"] = not key
     except Exception as e:
         msg = str(e)

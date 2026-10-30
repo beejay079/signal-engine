@@ -743,8 +743,8 @@ def structure_limit(view, reads, bias, bias_txt, now):
         if pl["dir"] != bias:
             why.append(f"{x['tf']} structure is {x['bias'].lower()}, against the top-down bias")
             continue
-        if not pl["valid"] or pl["status"] not in ("waiting",):
-            why.append(f"{x['tf']}: " + (pl["notes"][0] if pl["notes"] else f"plan is {pl['status']}"))
+        if pl["decision"] != "TRADE":
+            why.append(f"{x['tf']} NO TRADE: " + (pl["reasons"][0] if pl["reasons"] else f"plan is {pl['status']}"))
             continue
         d, k = pl["dir"], x["key"]
         dist = abs(pl["entry"] - pl["stop_loss"])
@@ -756,7 +756,7 @@ def structure_limit(view, reads, bias, bias_txt, now):
                    sl_reason=pl["sl_reason"], tp_reason=pl["tp_reason"], structure_id=x["id"],
                    sl_label=k["origin_label"], anchor=k["origin"], tp_label=k["extreme_label"])
         return lim, None
-    return None, "; ".join(why) if why else "no valid structure plan"
+    return None, "NO TRADE - " + ("; ".join(why) if why else "no valid structure plan")
 
 
 # --------------------------------------------------------------------------
@@ -935,7 +935,7 @@ def build_view(symbol, entry_tf, frames):
                 se.Ctx(frames["setup"].iloc[:-1], setup_tf))
 
 
-def analyse(symbol, entry_tf, frames, balance=100.0, risk_pct=1.0, cent=False, trades=None, now=None, P=None):
+def analyse(symbol, entry_tf, frames, balance=100.0, risk_pct=1.0, cent=False, trades=None, now=None, P=None, calibs=None):
     P = {**DEFAULTS, **(P or {})}
     now = now or datetime.now(timezone.utc)
     view = build_view(symbol, entry_tf, frames)
@@ -949,12 +949,19 @@ def analyse(symbol, entry_tf, frames, balance=100.0, risk_pct=1.0, cent=False, t
 
     ms = market_setup(view, e, price, lo_win, hi_win, now, P)
     top_tf, mid_tf, setup_tf = view.tfs
-    T = stx.analyse_tf(view.t, L["top"], symbol)
-    M = stx.analyse_tf(view.m, L["mid"], symbol, T["dir"], L["top"])
-    Sx = stx.analyse_tf(view.s, L["setup"], symbol, M["dir"] or T["dir"], L["mid"])
-    Ex = stx.analyse_tf(e, L["entry"], symbol, Sx["dir"], L["setup"])
+    calibs = calibs or {}
+    # each timeframe is read on its own candles only - one timeframe never changes another's levels
+    T, M, Sx, Ex = (stx.analyse_tf(stx.Lite(frames[k].iloc[:-1]), L[k], symbol, calibs.get(k))
+                    for k in ("top", "mid", "setup", "entry"))
+    above = {id(M): T, id(Sx): M, id(Ex): Sx}
     for x, role in ((T, "Bias"), (M, "Bias"), (Sx, "Setup"), (Ex, "Entry")):
         x["role"] = role
+        h = above.get(id(x))                     # alignment with the next higher timeframe (shown, never used for levels)
+        if h is None or not h["dir"] or not x["dir"]:
+            x["alignment"] = None
+        else:
+            x["alignment"] = dict(htf=h["tf"], agrees=h["dir"] == x["dir"],
+                                  text=f"{'with' if h['dir'] == x['dir'] else 'against'} the {h['tf']} ({h['bias'].lower()})")
     s_bias = T["dir"] if T["dir"] and M["dir"] in (0, T["dir"]) else (M["dir"] if not T["dir"] else 0)
     s_bias_txt = (f"{L['top']} and {L['mid']} structure both {stx_word(s_bias)}" if s_bias and T["dir"] == M["dir"]
                   else f"{L['top']} {stx_word(T['dir'])}, {L['mid']} {stx_word(M['dir'])}" if s_bias

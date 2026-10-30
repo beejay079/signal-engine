@@ -38,10 +38,11 @@ The pending order now comes from market structure on each timeframe: entry at th
 stop loss beyond the protected Higher Low / Lower High, take profit at the previous Higher High / Lower Low.
 **This rule has not been backtested on real gold yet.** Treat it as untested and use a demo account.
 
-The POI reaction percentages are **estimates** (35–65%) until you measure them:
+The POI percentages and the rule's track record are now **measured automatically** by `calib.py` on the
+last 5,000 candles of each timeframe (shown under each plan). A plan is only offered as TRADE if that history
+shows 20+ trades with a positive average result after spread. 5,000 candles is still a short sample
+(about 17 days on 5M, 7 months on 1H) — treat early results with caution.
 
-    python3 calibrate_poi.py candles.csv XAU/USD 15min 1h
-
-That writes `poi_stats.json`. Upload it with the site files and the page shows measured rates instead.
+For a longer test on your own data: `python3 calibrate_poi.py candles.csv XAU/USD 15min 1h 4h`.
 For reference: on random (fake) price data, zones "react" (+1R before price closes through them) about
 50% of the time — a POI only adds value if it does clearly better than that on real data.

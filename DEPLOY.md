@@ -9,22 +9,30 @@
 
 Your `TWELVE_DATA_API_KEY` and `APP_PASSWORD` stay as they are.
 
-**New in this version:** `structure.py` (market structure on every timeframe) and `calibrate_poi.py`
-(optional - measures real POI reaction rates). Make sure both are uploaded.
+**New in this version:** `structure.py` (market structure on every timeframe) and `calib.py` (measures every
+probability on the market's own history). Upload both, plus the changed `topdown.py`, `app.py`, `index.html`.
+`calibrate_poi.py` is optional (testing on your own CSV).
 
 ### Market structure — every timeframe
 For each of the 4 timeframes the page shows: bias and why, the last BOS/CHoCH with its exact price and time,
-the swing points (HH / HL / LH / LL), impulsive or corrective movement, valid POIs (order blocks, liquidity
-sweep, supply/demand base; FVG only as confirmation) with exact ranges and a reaction estimate, and a plan:
-**limit at the best order block, stop below the HL (buy) / above the LH (sell), take profit at the previous HH / LL**.
+the swing points (HH / HL / LH / LL), impulsive or corrective (and whether it supports the trend or warns of a
+reversal), valid POIs (order blocks, liquidity sweep, supply/demand base; FVG only as confirmation) with exact
+ranges, and a plan: **limit at the best order block, SL below the HL (buy) / above the LH (sell), TP at the
+previous HH / LL**, with R:R before and after spread.
 
-**Levels are fixed.** They are built from closed candles around the last BOS/CHoCH and judged once, 4 candles
-after the break. They change only when a new BOS/CHoCH closes on that timeframe - then that timeframe is
-re-read, marked **NEW**, and (with *Watch* on) you get an alert. The take profit appears once the HH/LL is
-confirmed (a pullback has started); until then the plan shows *forming*.
+**Probabilities are measured, not guessed.** The server replays every past BOS/CHoCH on the last 5,000 candles
+of that timeframe (1 Twelve Data credit each, cached 6 h) with the same code, and counts how often each kind of
+zone really reacted. Too few past examples → it says *not measured* instead of inventing a number.
 
-The pending order on the main card uses the setup timeframe's plan (then the entry, then the middle timeframe)
-only when it agrees with the top-down structure bias. This order rule is **not backtested yet** - see BACKTEST.md.
+**TRADE only when all pass:** R:R after spread ≥ 1.5 · zone reacted ≥ 50% in history · the full rule has 20+
+past trades on this market/timeframe with a positive average result · price has not reached the zone yet.
+Otherwise **NO TRADE** with the reasons. Expect NO TRADE most of the time - that is on purpose.
+
+**Levels are fixed.** Built from closed candles and frozen once, 4 candles after the break. They change only
+when a new BOS/CHoCH closes on that timeframe (marked **NEW**, alert with *Watch* on), or the status changes:
+filled, TP hit, stopped, missed, or *invalidated* (price closed beyond the protected HL/LH). Each timeframe is
+independent. Old setups are listed under *Previous setups* (kept on your phone).
+Note: the frozen levels live in server memory - after Render sleeps/restarts they are rebuilt from the same candles.
 
 ---
 
